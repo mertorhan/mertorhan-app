@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/api_exception.dart';
 import 'package:mertorhan_app/api/blog_api.dart';
+import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/blog_post_detail.dart';
 import 'package:mertorhan_app/screens/blog_detail_screen.dart';
@@ -17,11 +18,11 @@ import 'package:mertorhan_app/theme/app_theme.dart';
 class _FakeBlogApi extends BlogApi {
   _FakeBlogApi({this.page, this.error, this.completer});
 
-  final BlogPage? page;
+  final PagedResponse<BlogPost>? page;
   final Object? error;
 
   /// Verilirse yanit bu tamamlanana kadar bekletilir.
-  final Completer<BlogPage>? completer;
+  final Completer<PagedResponse<BlogPost>>? completer;
 
   int cagriSayisi = 0;
 
@@ -30,7 +31,7 @@ class _FakeBlogApi extends BlogApi {
   BlogPostDetail? detail;
 
   @override
-  Future<BlogPage> fetchPosts({int page = 1}) async {
+  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1}) async {
     cagriSayisi++;
     if (completer != null) return completer!.future;
     if (error != null) throw error!;
@@ -61,15 +62,20 @@ BlogPost _post({
   );
 }
 
-BlogPage _page(List<BlogPost> posts) =>
-    BlogPage(posts: posts, hasNextPage: false, totalCount: posts.length);
+PagedResponse<BlogPost> _page(List<BlogPost> posts) =>
+    PagedResponse<BlogPost>(items: posts, hasNextPage: false, totalCount: posts.length);
 
-Widget _wrap(BlogApi api) =>
-    MaterialApp(theme: AppTheme.light, home: BlogListScreen(api: api));
+/// Ekran artik sekme govdesi: kendi Scaffold'u yok, uretimde onu
+/// PublicationsScreen sagliyor. MediaTile'daki InkWell Material atasi
+/// istedigi icin test de Scaffold ile sarmaliyor.
+Widget _wrap(BlogApi api) => MaterialApp(
+  theme: AppTheme.light,
+  home: Scaffold(body: BlogListScreen(api: api)),
+);
 
 void main() {
   testWidgets('yukleniyor durumunda donen halka gorunur', (tester) async {
-    final api = _FakeBlogApi(completer: Completer<BlogPage>());
+    final api = _FakeBlogApi(completer: Completer<PagedResponse<BlogPost>>());
 
     await tester.pumpWidget(_wrap(api));
 
@@ -159,7 +165,7 @@ void main() {
   testWidgets('yukleme surerken ekran kaldirilirsa hata cikmaz', (
     tester,
   ) async {
-    final completer = Completer<BlogPage>();
+    final completer = Completer<PagedResponse<BlogPost>>();
     final api = _FakeBlogApi(completer: completer);
 
     await tester.pumpWidget(_wrap(api));
@@ -196,7 +202,7 @@ void main() {
   testWidgets('ekran kaldirildiktan sonra gelen hata da sessiz kalir', (
     tester,
   ) async {
-    final completer = Completer<BlogPage>();
+    final completer = Completer<PagedResponse<BlogPost>>();
     final api = _FakeBlogApi(completer: completer);
 
     await tester.pumpWidget(_wrap(api));

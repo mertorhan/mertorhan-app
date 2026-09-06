@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
-import '../api/api_exception.dart';
 import '../api/blog_api.dart';
 import '../models/blog_post.dart';
-import '../theme/app_colors.dart';
-import '../widgets/blog_post_tile.dart';
+import '../utils/meta_line.dart';
+import '../widgets/media_tile.dart';
+import '../widgets/paged_list_view.dart';
 import 'blog_detail_screen.dart';
 
-/// Yayinlar sekmesi: blog yazilarinin listesi.
+/// Yayinlar > Blog sekmesinin govdesi.
 ///
-/// Durum yonetimi setState ile; paket yok. Sayfalama BU EKRANDA YOK,
-/// yalnizca ilk sayfa cekilir. BlogPage.hasNextPage okunabilir durumda
-/// ama kullanilmiyor; sonsuz kaydirma ayri kart.
+/// Kendi AppBar'i YOK: ust sekmelerin AppBar'i PublicationsScreen'de,
+/// bu ekran onun TabBarView cocugu.
 class BlogListScreen extends StatefulWidget {
   const BlogListScreen({this.api, super.key});
 
@@ -25,14 +24,10 @@ class BlogListScreen extends StatefulWidget {
 }
 
 class _BlogListScreenState extends State<BlogListScreen> {
-  /// Yalnizca ekranin kendi kurdugu istemci; disaridan gelen sahte
-  /// uygulamanin istemcisi kapatilmaz, sahibi biz degiliz.
+  /// Yalnizca ekranin kendi kurdugu istemci; disaridan gelenin sahibi
+  /// biz degiliz, kapatilmaz.
   ApiClient? _ownedClient;
   late final BlogApi _api;
-
-  bool _loading = true;
-  ApiException? _error;
-  BlogPage? _page;
 
   @override
   void initState() {
@@ -46,46 +41,12 @@ class _BlogListScreenState extends State<BlogListScreen> {
       _ownedClient = client;
       _api = BlogApi(client: client);
     }
-
-    _load();
   }
 
   @override
   void dispose() {
     _ownedClient?.close();
     super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final BlogPage page = await _api.fetchPosts();
-      // Sekme durumu korunmuyor: istek ucusurken kullanici baska sekmeye
-      // gecerse bu ekran agactan silinir. O halde setState olu State
-      // uzerinde calisir ve hata verir.
-      if (!mounted) return;
-      setState(() {
-        _page = page;
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e;
-        _loading = false;
-      });
-    } catch (e) {
-      // ApiException disi bir sey de gelse ekran cokmemeli.
-      if (!mounted) return;
-      setState(() {
-        _error = ApiException.parse('beklenmeyen hata: $e');
-        _loading = false;
-      });
-    }
   }
 
   /// Detay ekranini acar.
@@ -103,88 +64,16 @@ class _BlogListScreenState extends State<BlogListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Yayınlar')),
-      body: _buildBody(context),
-    );
-  }
-
-  Widget _buildBody(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: switch (_error) {
-        final ApiException error => _MessageView(
-          message: error.userMessage,
-          action: FilledButton(
-            onPressed: _load,
-            child: const Text('Tekrar dene'),
-          ),
-        ),
-        // Hata yoksa _page dolu; ilk kare zaten _loading ile ayrildi.
-        null when _page!.posts.isEmpty => const _MessageView(
-          message: 'Henüz yazı yok',
-        ),
-        null => ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: _page!.posts.length,
-          separatorBuilder: (_, _) =>
-              const Divider(height: 1, indent: 16, endIndent: 16),
-          itemBuilder: (_, int index) {
-            final BlogPost post = _page!.posts[index];
-            return BlogPostTile(post: post, onTap: () => _openPost(post));
-          },
-        ),
-      },
-    );
-  }
-}
-
-/// Hata ve bos durumlarin ortak govdesi.
-///
-/// Kaydirilabilir, cunku RefreshIndicator ancak kaydirilabilir bir cocukla
-/// calisir; boylece bu durumlarda da asagi cekip yenilenebiliyor.
-class _MessageView extends StatelessWidget {
-  const _MessageView({required this.message, this.action});
-
-  final String message;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                    if (action != null) ...[
-                      const SizedBox(height: 16),
-                      action!,
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return PagedListView<BlogPost>(
+      fetch: _api.fetchPosts,
+      emptyMessage: 'Henüz yazı yok',
+      itemBuilder: (_, BlogPost post) => MediaTile(
+        imageUrl: post.coverImage,
+        metaLine: postMetaLine(post),
+        title: post.title,
+        summary: post.summary,
+        onTap: () => _openPost(post),
+      ),
     );
   }
 }
