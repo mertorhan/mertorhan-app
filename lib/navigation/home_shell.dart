@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/blog_api.dart';
-import '../screens/blog_list_screen.dart';
 import '../screens/placeholder_screen.dart';
+import '../screens/publications_screen.dart';
 
 /// Sekme tanimlari. Etiket ve ikon tek yerde durur; hem NavigationBar hem
 /// govde ayni listeden okur.
@@ -18,11 +17,11 @@ const List<({String label, IconData icon})> _tabs = [
 /// Sekme durumu KORUNMAZ: IndexedStack yok, sekme degisince onceki ekran
 /// atilir ve yenisi bastan kurulur. Bilincli sadelik karari.
 class HomeShell extends StatefulWidget {
-  const HomeShell({this.blogApi, super.key});
+  const HomeShell({this.publicationsApis = const PublicationsApis(), super.key});
 
-  /// Testlerde sahte uygulama verilir; Yayinlar ekranina gecer. Uretimde
-  /// null gecilir ve ekran kendi istemcisini kurar.
-  final BlogApi? blogApi;
+  /// Testlerde sahte uygulamalar verilir; Yayinlar ekranina gecer.
+  /// Uretimde bos gecilir ve her liste kendi istemcisini kurar.
+  final PublicationsApis publicationsApis;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -35,7 +34,7 @@ class _HomeShellState extends State<HomeShell> {
 
   /// Yayinlar gercek ekrana bagli; diger uc sekme hala yer tutucu.
   Widget _buildTab(int index) => switch (index) {
-    0 => BlogListScreen(api: widget.blogApi),
+    0 => PublicationsScreen(apis: widget.publicationsApis),
     _ => PlaceholderScreen(title: _tabs[index].label),
   };
 

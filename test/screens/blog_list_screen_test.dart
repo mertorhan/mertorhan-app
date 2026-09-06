@@ -65,8 +65,13 @@ BlogPost _post({
 PagedResponse<BlogPost> _page(List<BlogPost> posts) =>
     PagedResponse<BlogPost>(items: posts, hasNextPage: false, totalCount: posts.length);
 
-Widget _wrap(BlogApi api) =>
-    MaterialApp(theme: AppTheme.light, home: BlogListScreen(api: api));
+/// Ekran artik sekme govdesi: kendi Scaffold'u yok, uretimde onu
+/// PublicationsScreen sagliyor. MediaTile'daki InkWell Material atasi
+/// istedigi icin test de Scaffold ile sarmaliyor.
+Widget _wrap(BlogApi api) => MaterialApp(
+  theme: AppTheme.light,
+  home: Scaffold(body: BlogListScreen(api: api)),
+);
 
 void main() {
   testWidgets('yukleniyor durumunda donen halka gorunur', (tester) async {

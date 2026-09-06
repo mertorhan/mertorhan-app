@@ -4,6 +4,7 @@ import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/navigation/home_shell.dart';
+import 'package:mertorhan_app/screens/publications_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 
 /// Sahte uygulama: Yayinlar sekmesi artik gercek ekrana bagli, yani sahte
@@ -25,7 +26,9 @@ Finder _appBarTitle(String title) => find.descendant(
 
 Widget _wrap() => MaterialApp(
   theme: AppTheme.light,
-  home: HomeShell(blogApi: _FakeBlogApi()),
+  home: HomeShell(
+    publicationsApis: PublicationsApis(blog: _FakeBlogApi()),
+  ),
 );
 
 void main() {
