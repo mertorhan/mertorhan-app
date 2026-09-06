@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../api/blog_api.dart';
+import '../api/paged_response.dart';
 import '../models/blog_post.dart';
 import '../theme/app_colors.dart';
 import '../widgets/blog_post_tile.dart';
@@ -11,7 +12,7 @@ import 'blog_detail_screen.dart';
 /// Yayinlar sekmesi: blog yazilarinin listesi.
 ///
 /// Durum yonetimi setState ile; paket yok. Sayfalama BU EKRANDA YOK,
-/// yalnizca ilk sayfa cekilir. BlogPage.hasNextPage okunabilir durumda
+/// yalnizca ilk sayfa cekilir. PagedResponse.hasNextPage okunabilir durumda
 /// ama kullanilmiyor; sonsuz kaydirma ayri kart.
 class BlogListScreen extends StatefulWidget {
   const BlogListScreen({this.api, super.key});
@@ -32,7 +33,7 @@ class _BlogListScreenState extends State<BlogListScreen> {
 
   bool _loading = true;
   ApiException? _error;
-  BlogPage? _page;
+  PagedResponse<BlogPost>? _page;
 
   @override
   void initState() {
@@ -63,7 +64,7 @@ class _BlogListScreenState extends State<BlogListScreen> {
     });
 
     try {
-      final BlogPage page = await _api.fetchPosts();
+      final PagedResponse<BlogPost> page = await _api.fetchPosts();
       // Sekme durumu korunmuyor: istek ucusurken kullanici baska sekmeye
       // gecerse bu ekran agactan silinir. O halde setState olu State
       // uzerinde calisir ve hata verir.
@@ -125,16 +126,16 @@ class _BlogListScreenState extends State<BlogListScreen> {
           ),
         ),
         // Hata yoksa _page dolu; ilk kare zaten _loading ile ayrildi.
-        null when _page!.posts.isEmpty => const _MessageView(
+        null when _page!.items.isEmpty => const _MessageView(
           message: 'Henüz yazı yok',
         ),
         null => ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: _page!.posts.length,
+          itemCount: _page!.items.length,
           separatorBuilder: (_, _) =>
               const Divider(height: 1, indent: 16, endIndent: 16),
           itemBuilder: (_, int index) {
-            final BlogPost post = _page!.posts[index];
+            final BlogPost post = _page!.items[index];
             return BlogPostTile(post: post, onTap: () => _openPost(post));
           },
         ),
