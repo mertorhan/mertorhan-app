@@ -81,7 +81,7 @@ Rota (`/routes/`) ucu **henüz yok.**
 - `/photos/` için detay ucu yok.
 - Sıralama garantisi yok: `published_at` gün hassasiyetlidir.
 
-Adresler İngilizce, site adresleri Türkçe. API makine yüzü, site insan yüzü.
+API adresleri İngilizce, site adresleri Türkçe. API makine yüzü, site insan yüzü.
 
 ## Sık komutlar
 ```bash
