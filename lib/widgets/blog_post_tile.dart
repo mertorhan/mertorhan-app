@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/blog_post.dart';
 import '../theme/app_colors.dart';
-import '../utils/turkish_date.dart';
+import '../utils/post_meta.dart';
 
 /// Yayinlar listesindeki tek bir yazi.
 ///
@@ -34,7 +34,7 @@ class BlogPostTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _metaLine(post),
+                  postMetaLine(post),
                   style: textTheme.labelMedium?.copyWith(
                     color: AppColors.secondary,
                   ),
@@ -66,19 +66,6 @@ class BlogPostTile extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Ust satir: kategori · tarih · okuma suresi.
-///
-/// Parcalar once listeye toplanir, sonra birlestirilir. Boylece category
-/// null oldugunda ayraci da dusmus olur; satir " · " ile baslayamaz.
-String _metaLine(BlogPost post) {
-  final List<String> parts = [
-    if (post.category != null) post.category!,
-    formatTurkishDate(post.publishedAt),
-    '${post.readingTime} dk',
-  ];
-  return parts.join(' · ');
 }
 
 /// 96x96 kapak gorseli, yoksa ayni olcude yer tutucu.
