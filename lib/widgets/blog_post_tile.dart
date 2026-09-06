@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/blog_post.dart';
 import '../theme/app_colors.dart';
-import '../utils/post_meta.dart';
+import '../utils/meta_line.dart';
 
 /// Yayinlar listesindeki tek bir yazi.
 ///

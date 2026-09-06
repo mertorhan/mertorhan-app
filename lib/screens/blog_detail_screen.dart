@@ -6,7 +6,7 @@ import '../api/blog_api.dart';
 import '../models/blog_post_detail.dart';
 import '../models/post_section.dart';
 import '../theme/app_colors.dart';
-import '../utils/post_meta.dart';
+import '../utils/meta_line.dart';
 
 /// Tek bir yazinin detayi.
 ///
