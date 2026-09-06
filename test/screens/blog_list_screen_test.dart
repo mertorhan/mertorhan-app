@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/api_exception.dart';
 import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
+import 'package:mertorhan_app/models/blog_post_detail.dart';
+import 'package:mertorhan_app/screens/blog_detail_screen.dart';
 import 'package:mertorhan_app/screens/blog_list_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 
@@ -23,6 +25,10 @@ class _FakeBlogApi extends BlogApi {
 
   int cagriSayisi = 0;
 
+  /// Detay ekrani acildiginda kullanilir; boylece gezinme testi de aga
+  /// cikmaz.
+  BlogPostDetail? detail;
+
   @override
   Future<BlogPage> fetchPosts({int page = 1}) async {
     cagriSayisi++;
@@ -30,6 +36,9 @@ class _FakeBlogApi extends BlogApi {
     if (error != null) throw error!;
     return this.page!;
   }
+
+  @override
+  Future<BlogPostDetail> fetchPost(String slug) async => detail!;
 }
 
 BlogPost _post({
@@ -164,6 +173,24 @@ void main() {
 
     // mounted kontrolu olmasaydi olu State uzerinde setState cagrilirdi.
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tile\'a dokununca detay ekrani acilir', (tester) async {
+    final post = _post(title: 'Scrum ne diyor?');
+    final api = _FakeBlogApi(page: _page([post]));
+    api.detail = BlogPostDetail(post: post, sections: const []);
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BlogDetailScreen), findsNothing);
+
+    await tester.tap(find.text('Scrum ne diyor?'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BlogDetailScreen), findsOneWidget);
+    // Ayni baslik artik detay ekraninda gorunuyor.
+    expect(find.text('Scrum ne diyor?'), findsOneWidget);
   });
 
   testWidgets('ekran kaldirildiktan sonra gelen hata da sessiz kalir', (
