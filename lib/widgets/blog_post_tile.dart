@@ -13,7 +13,7 @@ import '../utils/turkish_date.dart';
 class BlogPostTile extends StatelessWidget {
   const BlogPostTile({required this.post, super.key});
 
-  static const double _imageSize = 80;
+  static const double _imageSize = 96;
 
   final BlogPost post;
 
@@ -81,10 +81,12 @@ String _metaLine(BlogPost post) {
   return parts.join(' · ');
 }
 
-/// 80x80 kapak gorseli, yoksa ayni olcude yer tutucu.
+/// 96x96 kapak gorseli, yoksa ayni olcude yer tutucu.
 ///
-/// Yer tutucu bosluk birakmaz; liste hizalamasi kapakli ve kapaksiz
-/// kayitlarda ayni kalir.
+/// Gorsel BoxFit.contain ile yerlestirilir: kirpilmaz, tamami gorunur.
+/// Site tarafindaki kararla (KB-87) ayni. Contain nedeniyle kalan bosluk
+/// yer tutucuyla ayni zemini alir, boylece kapakli ve kapaksiz kayitlar
+/// ayni aileden gorunur ve liste hizalamasi bozulmaz.
 class _Cover extends StatelessWidget {
   const _Cover({required this.url});
 
@@ -94,32 +96,34 @@ class _Cover extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
-      child: SizedBox(
-        width: BlogPostTile._imageSize,
-        height: BlogPostTile._imageSize,
-        child: url == null
-            ? const _CoverPlaceholder()
-            : Image.network(
-                url!,
-                fit: BoxFit.cover,
-                // Olu URL de ayni yer tutucuya duser, duzen bozulmaz.
-                errorBuilder: (_, _, _) => const _CoverPlaceholder(),
-              ),
+      // Zemin tek yerden boyanir: hem contain boslugu hem yer tutucu.
+      child: ColoredBox(
+        color: AppColors.card,
+        child: SizedBox(
+          width: BlogPostTile._imageSize,
+          height: BlogPostTile._imageSize,
+          child: url == null
+              ? const _CoverPlaceholder()
+              : Image.network(
+                  url!,
+                  fit: BoxFit.contain,
+                  // Olu URL de ayni yer tutucuya duser, duzen bozulmaz.
+                  errorBuilder: (_, _, _) => const _CoverPlaceholder(),
+                ),
+        ),
       ),
     );
   }
 }
 
+/// Zemini _Cover boyar; burada yalnizca ikon var.
 class _CoverPlaceholder extends StatelessWidget {
   const _CoverPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: AppColors.card,
-      child: Center(
-        child: Icon(Icons.image_outlined, color: AppColors.faint, size: 28),
-      ),
+    return const Center(
+      child: Icon(Icons.image_outlined, color: AppColors.faint, size: 28),
     );
   }
 }
