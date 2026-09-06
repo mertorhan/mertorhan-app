@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../api/blog_api.dart';
+import '../screens/blog_list_screen.dart';
 import '../screens/placeholder_screen.dart';
 
 /// Sekme tanimlari. Etiket ve ikon tek yerde durur; hem NavigationBar hem
@@ -16,7 +18,11 @@ const List<({String label, IconData icon})> _tabs = [
 /// Sekme durumu KORUNMAZ: IndexedStack yok, sekme degisince onceki ekran
 /// atilir ve yenisi bastan kurulur. Bilincli sadelik karari.
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({this.blogApi, super.key});
+
+  /// Testlerde sahte uygulama verilir; Yayinlar ekranina gecer. Uretimde
+  /// null gecilir ve ekran kendi istemcisini kurar.
+  final BlogApi? blogApi;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -27,15 +33,21 @@ class _HomeShellState extends State<HomeShell> {
   /// acilis mantigi bu kartta yok; uyelik geldiginde ele alinacak.
   int _selectedIndex = 0;
 
+  /// Yayinlar gercek ekrana bagli; diger uc sekme hala yer tutucu.
+  Widget _buildTab(int index) => switch (index) {
+    0 => BlogListScreen(api: widget.blogApi),
+    _ => PlaceholderScreen(title: _tabs[index].label),
+  };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Dort sekme de ayni widget tipi oldugu icin, key olmadan Flutter ayni
-      // Element'i yeniden kullanir ve ekran gercekten bastan kurulmaz.
+      // Yer tutucu sekmeler ayni widget tipi oldugu icin, key olmadan Flutter
+      // ayni Element'i yeniden kullanir ve ekran gercekten bastan kurulmaz.
       // ValueKey bunu garanti eder.
-      body: PlaceholderScreen(
+      body: KeyedSubtree(
         key: ValueKey(_selectedIndex),
-        title: _tabs[_selectedIndex].label,
+        child: _buildTab(_selectedIndex),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
