@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/blog_post.dart';
 import '../theme/app_colors.dart';
-import '../utils/turkish_date.dart';
+import '../utils/post_meta.dart';
 
 /// Yayinlar listesindeki tek bir yazi.
 ///
@@ -11,74 +11,68 @@ import '../utils/turkish_date.dart';
 ///                   Yazinin basligi
 ///                   Ozet en fazla iki satir...
 class BlogPostTile extends StatelessWidget {
-  const BlogPostTile({required this.post, super.key});
+  const BlogPostTile({required this.post, this.onTap, super.key});
 
   static const double _imageSize = 96;
 
   final BlogPost post;
 
+  /// Dokunma davranisini cagiran belirler; navigasyon bu widgetin isi
+  /// degil, boylece aptal kalir ve testi kolaylasir.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Cover(url: post.coverImage),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _metaLine(post),
-                  style: textTheme.labelMedium?.copyWith(
-                    color: AppColors.secondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  post.title,
-                  style: textTheme.titleMedium,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // Bos ozet gecerli bir degerdir; o durumda alan hic cizilmez
-                // ve kart kisalir. null kontrolu yetmez, isEmpty gerekir.
-                if (post.summary.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Cover(url: post.coverImage),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    post.summary,
-                    style: textTheme.bodySmall?.copyWith(
+                    postMetaLine(post),
+                    style: textTheme.labelMedium?.copyWith(
                       color: AppColors.secondary,
                     ),
-                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    post.title,
+                    style: textTheme.titleMedium,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // Bos ozet gecerli bir degerdir; o durumda alan hic cizilmez
+                  // ve kart kisalir. null kontrolu yetmez, isEmpty gerekir.
+                  if (post.summary.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      post.summary,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.secondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-/// Ust satir: kategori · tarih · okuma suresi.
-///
-/// Parcalar once listeye toplanir, sonra birlestirilir. Boylece category
-/// null oldugunda ayraci da dusmus olur; satir " · " ile baslayamaz.
-String _metaLine(BlogPost post) {
-  final List<String> parts = [
-    if (post.category != null) post.category!,
-    formatTurkishDate(post.publishedAt),
-    '${post.readingTime} dk',
-  ];
-  return parts.join(' · ');
 }
 
 /// 96x96 kapak gorseli, yoksa ayni olcude yer tutucu.

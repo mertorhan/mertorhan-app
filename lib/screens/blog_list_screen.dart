@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../api/blog_api.dart';
+import '../models/blog_post.dart';
 import '../theme/app_colors.dart';
 import '../widgets/blog_post_tile.dart';
+import 'blog_detail_screen.dart';
 
 /// Yayinlar sekmesi: blog yazilarinin listesi.
 ///
@@ -86,6 +88,19 @@ class _BlogListScreenState extends State<BlogListScreen> {
     }
   }
 
+  /// Detay ekranini acar.
+  ///
+  /// widget.api asagi geciriliyor: uretimde null oldugu icin detay kendi
+  /// istemcisini kurar; testte sahte uygulama akar ve gezinme testi de
+  /// aga cikmaz.
+  void _openPost(BlogPost post) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlogDetailScreen(slug: post.slug, api: widget.api),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,8 +133,10 @@ class _BlogListScreenState extends State<BlogListScreen> {
           itemCount: _page!.posts.length,
           separatorBuilder: (_, _) =>
               const Divider(height: 1, indent: 16, endIndent: 16),
-          itemBuilder: (_, int index) =>
-              BlogPostTile(post: _page!.posts[index]),
+          itemBuilder: (_, int index) {
+            final BlogPost post = _page!.posts[index];
+            return BlogPostTile(post: post, onTap: () => _openPost(post));
+          },
         ),
       },
     );

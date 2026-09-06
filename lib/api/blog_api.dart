@@ -1,4 +1,5 @@
 import '../models/blog_post.dart';
+import '../models/blog_post_detail.dart';
 import 'api_client.dart';
 import 'api_exception.dart';
 
@@ -63,5 +64,14 @@ class BlogApi {
       hasNextPage: json['next'] != null,
       totalCount: count,
     );
+  }
+
+  /// Tek bir yazinin detayi.
+  ///
+  /// Olmayan slug icin sunucu 404 doner; ApiClient durum kodu 200 degilse
+  /// zaten ApiException.server(404) firlatiyor, burada ek kod gerekmiyor.
+  Future<BlogPostDetail> fetchPost(String slug) async {
+    final Map<String, dynamic> json = await _client.getJson('blog/$slug/');
+    return BlogPostDetail.fromJson(json);
   }
 }
