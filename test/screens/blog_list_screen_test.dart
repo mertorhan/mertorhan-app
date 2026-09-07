@@ -7,17 +7,27 @@ import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/blog_post_detail.dart';
+import 'package:mertorhan_app/models/filter_option.dart';
+import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/screens/blog_detail_screen.dart';
 import 'package:mertorhan_app/screens/blog_list_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
+import 'package:mertorhan_app/widgets/filter_chips.dart';
 
 /// Sahte uygulama: fetchPosts ezilir, gercek istek atilmaz.
 ///
 /// Aga cikan test, internet yavassa veya sunucu kapaliysa kirmizi olur ve
 /// kodda hata varmis gibi gorunur. Bu dosyada hicbir test aga cikmaz.
 class _FakeBlogApi extends BlogApi {
-  _FakeBlogApi({this.page, this.error, this.completer});
+  _FakeBlogApi({this.page, this.error, this.completer, this.options});
+
+  /// fetchFilterOptions ezilmezse uretim govdesi calisir ve test GERCEK
+  /// aga cikar; ekran secenekleri ACILISTA cekiyor.
+  final FilterOptions? options;
+
+  /// Ekranin fetch'e gecirdigi son secim.
+  FilterSelection? sonSecim;
 
   final PagedResponse<BlogPost>? page;
   final Object? error;
@@ -32,7 +42,11 @@ class _FakeBlogApi extends BlogApi {
   BlogPostDetail? detail;
 
   @override
-  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async {
+  Future<PagedResponse<BlogPost>> fetchPosts({
+    int page = 1,
+    FilterSelection? selection,
+  }) async {
+    sonSecim = selection;
     cagriSayisi++;
     if (completer != null) return completer!.future;
     if (error != null) throw error!;
@@ -41,6 +55,10 @@ class _FakeBlogApi extends BlogApi {
 
   @override
   Future<BlogPostDetail> fetchPost(String slug) async => detail!;
+
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      options ?? const FilterOptions.empty();
 }
 
 BlogPost _post({
@@ -213,5 +231,134 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  // --- KB-112: kategori filtresi ---
+
+  testWidgets('secenek varsa hap sirasi cizilir', (tester) async {
+    final api = _FakeBlogApi(
+      page: _page([_post()]),
+      options: const FilterOptions(
+        groups: {
+          'category': [
+            FilterOption(value: '5', label: 'Ürün Yönetimi', count: 1),
+          ],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FilterChipRow), findsOneWidget);
+    expect(find.text('Tümü'), findsOneWidget);
+    expect(find.text('Ürün Yönetimi (1)'), findsOneWidget);
+  });
+
+  testWidgets('secenek yoksa hap sirasi HIC cizilmez', (tester) async {
+    final api = _FakeBlogApi(page: _page([_post()]));
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FilterChipRow), findsNothing);
+    // Liste normal calisiyor.
+    expect(find.text('Ornek baslik'), findsOneWidget);
+  });
+
+  testWidgets('kategori secince liste yeni selection ile cekilir', (
+    tester,
+  ) async {
+    final api = _FakeBlogApi(
+      page: _page([_post()]),
+      options: const FilterOptions(
+        groups: {
+          'category': [
+            FilterOption(value: '5', label: 'Ürün Yönetimi', count: 1),
+          ],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(api.cagriSayisi, 1);
+
+    await tester.tap(find.text('Ürün Yönetimi (1)'));
+    await tester.pumpAndSettle();
+
+    expect(api.cagriSayisi, 2);
+    expect(api.sonSecim, const FilterSelection.empty().toggle('category', '5'));
+  });
+
+  testWidgets('ayni hapa tekrar basmak Tumu ye dondurur', (tester) async {
+    final api = _FakeBlogApi(
+      page: _page([_post()]),
+      options: const FilterOptions(
+        groups: {
+          'category': [
+            FilterOption(value: '5', label: 'Ürün Yönetimi', count: 1),
+          ],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ürün Yönetimi (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ürün Yönetimi (1)'));
+    await tester.pumpAndSettle();
+
+    expect(api.sonSecim, const FilterSelection.empty());
+  });
+
+  testWidgets('TEK SECIM: ikinci kategori oncekini degistirir', (tester) async {
+    final api = _FakeBlogApi(
+      page: _page([_post()]),
+      options: const FilterOptions(
+        groups: {
+          'category': [
+            FilterOption(value: '5', label: 'Ürün Yönetimi', count: 1),
+            FilterOption(value: '3', label: 'Ekonomi', count: 4),
+          ],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ürün Yönetimi (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ekonomi (4)'));
+    await tester.pumpAndSettle();
+
+    // Ikisi birden degil, yalnizca sonuncusu.
+    expect(api.sonSecim, const FilterSelection.empty().toggle('category', '3'));
+    expect(api.sonSecim!.count, 1);
+  });
+
+  testWidgets('secim varken bos sonuc farkli mesaj gosterir', (tester) async {
+    final api = _FakeBlogApi(
+      page: _page([]),
+      options: const FilterOptions(
+        groups: {
+          'category': [
+            FilterOption(value: '5', label: 'Ürün Yönetimi', count: 1),
+          ],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(find.text('Henüz yazı yok'), findsOneWidget);
+
+    await tester.tap(find.text('Ürün Yönetimi (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bu filtreye uyan yazı yok'), findsOneWidget);
   });
 }

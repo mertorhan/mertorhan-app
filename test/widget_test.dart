@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
+import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/navigation/home_shell.dart';
 import 'package:mertorhan_app/screens/publications_screen.dart';
@@ -15,6 +16,14 @@ class _FakeBlogApi extends BlogApi {
   @override
   Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async =>
       const PagedResponse<BlogPost>(items: [], hasNextPage: false, totalCount: 0);
+
+  /// fetchFilterOptions ezilmezse uretim govdesi calisir ve test GERCEK
+  /// aga cikar; sahte API gercek sinifi extend ediyor. Blog ve galeri
+  /// ekrani secenekleri ACILISTA cektigi icin bu kacinilmaz.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
+
 }
 
 /// Sekme adi ayni anda navigasyon cubugunda ve AppBar'da gecer. Duz
