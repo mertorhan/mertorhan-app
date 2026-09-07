@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
+import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/navigation/home_shell.dart';
 import 'package:mertorhan_app/screens/publications_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
@@ -12,7 +13,7 @@ import 'package:mertorhan_app/theme/app_theme.dart';
 /// yavassa kirmizi olur ve kodda hata varmis gibi gorunur.
 class _FakeBlogApi extends BlogApi {
   @override
-  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1}) async =>
+  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async =>
       const PagedResponse<BlogPost>(items: [], hasNextPage: false, totalCount: 0);
 }
 

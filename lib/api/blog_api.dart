@@ -1,7 +1,10 @@
 import '../models/blog_post.dart';
 import '../models/blog_post_detail.dart';
+import '../models/filter_options.dart';
+import '../models/filter_selection.dart';
 import 'api_client.dart';
 import 'paged_response.dart';
+import 'query.dart';
 
 /// Blog uclarini cagiran katman.
 class BlogApi {
@@ -10,10 +13,22 @@ class BlogApi {
   final ApiClient _client;
 
   /// [page] 1'den baslar; DRF'nin sayfalama parametresi.
-  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1}) async {
-    final String path = page <= 1 ? 'blog/' : 'blog/?page=$page';
+  ///
+  /// [selection] verilmezse filtre parametresi yazilmaz ve adres eskisiyle
+  /// birebir ayni kalir.
+  Future<PagedResponse<BlogPost>> fetchPosts({
+    int page = 1,
+    FilterSelection? selection,
+  }) async {
+    final String path = buildPath('blog/', page: page, selection: selection);
     final Map<String, dynamic> json = await _client.getJson(path);
     return parsePagedResponse(json, BlogPost.fromJson, label: 'blog/');
+  }
+
+  /// Blog listesinin filtre secenekleri. Tek grup: category.
+  Future<FilterOptions> fetchFilterOptions() async {
+    final Map<String, dynamic> json = await _client.getJson('filters/blog/');
+    return FilterOptions.fromJson(json);
   }
 
   /// Tek bir yazinin detayi.
