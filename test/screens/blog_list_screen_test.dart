@@ -7,6 +7,7 @@ import 'package:mertorhan_app/api/blog_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/blog_post_detail.dart';
+import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/screens/blog_detail_screen.dart';
 import 'package:mertorhan_app/screens/blog_list_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
@@ -31,7 +32,7 @@ class _FakeBlogApi extends BlogApi {
   BlogPostDetail? detail;
 
   @override
-  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1}) async {
+  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async {
     cagriSayisi++;
     if (completer != null) return completer!.future;
     if (error != null) throw error!;

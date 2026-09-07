@@ -5,6 +5,7 @@ import 'package:mertorhan_app/api/books_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/models/book.dart';
 import 'package:mertorhan_app/models/book_detail.dart';
+import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/screens/book_detail_screen.dart';
 import 'package:mertorhan_app/screens/book_list_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
@@ -24,7 +25,7 @@ class _FakeBooksApi extends BooksApi {
   BookDetail? detail;
 
   @override
-  Future<PagedResponse<Book>> fetchBooks({int page = 1}) async {
+  Future<PagedResponse<Book>> fetchBooks({int page = 1, FilterSelection? selection}) async {
     if (error != null) throw error!;
     return this.page!;
   }

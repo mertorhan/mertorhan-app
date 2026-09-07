@@ -10,6 +10,7 @@ import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/api/photos_api.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/book.dart';
+import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/photo.dart';
 import 'package:mertorhan_app/models/review.dart';
 import 'package:mertorhan_app/screens/publications_screen.dart';
@@ -21,7 +22,7 @@ class _FakeBlogApi extends BlogApi {
   final List<BlogPost> items;
 
   @override
-  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1}) async =>
+  Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async =>
       _paged(items);
 }
 
@@ -32,7 +33,7 @@ class _FakeMoviesApi extends MoviesApi {
   final Completer<PagedResponse<Review>>? completer;
 
   @override
-  Future<PagedResponse<Review>> fetchReviews({int page = 1}) async {
+  Future<PagedResponse<Review>> fetchReviews({int page = 1, FilterSelection? selection}) async {
     if (completer != null) return completer!.future;
     if (error != null) throw error!;
     return _paged(items);
@@ -45,7 +46,7 @@ class _FakeBooksApi extends BooksApi {
   final Object? error;
 
   @override
-  Future<PagedResponse<Book>> fetchBooks({int page = 1}) async {
+  Future<PagedResponse<Book>> fetchBooks({int page = 1, FilterSelection? selection}) async {
     if (error != null) throw error!;
     return _paged(items);
   }
@@ -57,7 +58,7 @@ class _FakePhotosApi extends PhotosApi {
   final Object? error;
 
   @override
-  Future<PagedResponse<Photo>> fetchPhotos({int page = 1}) async {
+  Future<PagedResponse<Photo>> fetchPhotos({int page = 1, FilterSelection? selection}) async {
     if (error != null) throw error!;
     return _paged(items);
   }

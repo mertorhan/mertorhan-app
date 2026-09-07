@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/api_exception.dart';
 import 'package:mertorhan_app/api/movies_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
+import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/review.dart';
 import 'package:mertorhan_app/models/review_detail.dart';
 import 'package:mertorhan_app/screens/movie_detail_screen.dart';
@@ -24,7 +25,7 @@ class _FakeMoviesApi extends MoviesApi {
   ReviewDetail? detail;
 
   @override
-  Future<PagedResponse<Review>> fetchReviews({int page = 1}) async {
+  Future<PagedResponse<Review>> fetchReviews({int page = 1, FilterSelection? selection}) async {
     if (error != null) throw error!;
     return this.page!;
   }
