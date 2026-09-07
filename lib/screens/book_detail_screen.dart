@@ -9,6 +9,8 @@ import '../theme/app_colors.dart';
 import '../utils/meta_line.dart';
 import '../utils/turkish_date.dart';
 import '../utils/turkish_number.dart';
+import '../widgets/credits_block.dart';
+import '../widgets/error_view.dart';
 import '../widgets/quote_box.dart';
 
 /// Tek bir kitabin detayi.
@@ -108,40 +110,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
 
     final ApiException? error = _error;
     if (error != null) {
-      return _ErrorView(message: error.userMessage, onRetry: _load);
+      return ErrorView(message: error.userMessage, onRetry: _load);
     }
 
     // Bos durum yok: kitap ya vardir ya sunucu 404 doner.
     return _DetailBody(detail: _detail!);
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: AppColors.secondary),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Tekrar dene')),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -200,7 +173,7 @@ class _DetailBody extends StatelessWidget {
               ),
             ),
           ),
-        _CreditsBlock(detail: detail),
+        CreditsBlock(rows: _bookCreditRows(detail)),
         // Govde bos "" gelebilir; null kontrolu yetmez.
         if (detail.body.isNotEmpty)
           Padding(
@@ -218,80 +191,26 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
-/// Kitabin kunyesi: dikey liste.
+/// Kitabin kunye satirlari.
 ///
-/// Sitedeki IZGARA DEGIL. Dar ekranda yan yana hucre okunmaz; etiket
-/// ustte, deger altta.
+/// Bos degerleri eleme ve "hic satir kalmazsa blogu cizme" isi
+/// CreditsBlock'ta; burada yalnizca hangi alanin hangi etiketle
+/// gosterildigi duruyor.
 ///
-/// BOS ALAN HIC BASILMAZ, hicbir alan yoksa blok HIC gorunmez — sitedeki
-/// kuralin aynisi. Canlida su an dort kitabin dordunde de kunye bos,
-/// yani blok bugun hic cizilmiyor; bu dogru davranis.
-class _CreditsBlock extends StatelessWidget {
-  const _CreditsBlock({required this.detail});
+/// Canlida su an dort kitabin dordunde de kunye bos, yani blok bugun
+/// hic cizilmiyor; bu dogru davranis.
+List<(String, String)> _bookCreditRows(BookDetail detail) {
+  final DateTime? readAt = detail.book.readAt;
 
-  final BookDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final DateTime? readAt = detail.book.readAt;
-
-    // Etiketler dogrudan buyuk harfle yazili; toUpperCase cagrilmiyor.
-    // Turkce'de 'i' buyuyunce 'İ' olmali, Dart'in varsayilani 'I' verir.
-    final List<(String, String)> rows = <(String, String)>[
-      // Duz metin book.author / book.translator KULLANILMIYOR; kunye
-      // yeni ad listelerinden ciziliyor. Site tarafinda da boyle.
-      ('YAZAR', joinMeta(detail.authors)),
-      ('ÇEVİRMEN', joinMeta(detail.translators)),
-      ('YAYINEVİ', detail.publisher ?? ''),
-      ('BASIM YILI', detail.book.releaseYear?.toString() ?? ''),
-      // 'Mart 2026' bicimi: gun yok.
-      ('OKUDUĞUM', readAt == null ? '' : formatTurkishMonthYear(readAt)),
-      ('TÜR', joinMeta(detail.genres)),
-    ].where(((String, String) row) => row.$2.isNotEmpty).toList();
-
-    if (rows.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (String label, String value) in rows)
-            _CreditRow(label: label, value: value),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreditRow extends StatelessWidget {
-  const _CreditRow({required this.label, required this.value});
-
-  final String label;
-
-  /// Coklu degerler joinMeta ile ' · ' birlestirilmis halde gelir.
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: textTheme.labelSmall?.copyWith(
-              color: AppColors.secondary,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(value, style: textTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
+  return <(String, String)>[
+    // Duz metin book.author / book.translator KULLANILMIYOR; kunye
+    // yeni ad listelerinden ciziliyor. Site tarafinda da boyle.
+    ('YAZAR', joinMeta(detail.authors)),
+    ('ÇEVİRMEN', joinMeta(detail.translators)),
+    ('YAYINEVİ', detail.publisher ?? ''),
+    ('BASIM YILI', detail.book.releaseYear?.toString() ?? ''),
+    // 'Mart 2026' bicimi: gun yok.
+    ('OKUDUĞUM', readAt == null ? '' : formatTurkishMonthYear(readAt)),
+    ('TÜR', joinMeta(detail.genres)),
+  ];
 }
