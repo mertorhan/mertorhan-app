@@ -300,26 +300,30 @@ void main() {
     expect(find.text('Henüz fotoğraf yok'), findsOneWidget);
   });
 
-  // KB-112 ile kitap ogesi dokunulabilir oldu; bu test artik yalnizca
-  // film icin gecerli. Galeri de dokunulamaz ama onun ayri testi yok.
-  testWidgets('film ogeleri dokunulabilir degil', (tester) async {
+  // KB-112 ile once kitap, sonra film ogesi dokunulabilir oldu. Geriye
+  // yalnizca galeri kaldi: tam ekran goruntuleme ayri kart.
+  testWidgets('galeri ogeleri dokunulabilir degil', (tester) async {
     await tester.pumpWidget(
       _wrap(
         PublicationsApis(
           blog: _FakeBlogApi(),
-          movies: _FakeMoviesApi(items: [_review('Bir film')]),
+          movies: _FakeMoviesApi(),
           books: _FakeBooksApi(),
-          photos: _FakePhotosApi(),
+          photos: _FakePhotosApi(items: [_photo('Bir fotograf')]),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await _gotoTab(tester, 'Film ve dizi');
+    await _gotoTab(tester, 'Galeri');
 
-    // Detay ekrani yok; onTap verilmedigi icin InkWell tepkisiz olmali.
+    // Tam ekran goruntuleme yok; onTap verilmedigi icin InkWell tepkisiz
+    // olmali.
     final InkWell inkWell = tester.widget<InkWell>(
-      find.ancestor(of: find.text('Bir film'), matching: find.byType(InkWell)),
+      find.ancestor(
+        of: find.text('Bir fotograf'),
+        matching: find.byType(InkWell),
+      ),
     );
     expect(inkWell.onTap, isNull);
   });

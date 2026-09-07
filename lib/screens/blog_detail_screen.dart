@@ -7,6 +7,7 @@ import '../models/blog_post_detail.dart';
 import '../models/post_section.dart';
 import '../theme/app_colors.dart';
 import '../utils/meta_line.dart';
+import '../widgets/error_view.dart';
 import '../widgets/quote_box.dart';
 
 /// Tek bir yazinin detayi.
@@ -108,44 +109,11 @@ class _BlogDetailScreenState extends State<BlogDetailScreen> {
 
     final ApiException? error = _error;
     if (error != null) {
-      return _ErrorView(message: error.userMessage, onRetry: _load);
+      return ErrorView(message: error.userMessage, onRetry: _load);
     }
 
     // Bos durum yok: yazi ya vardir ya sunucu 404 doner.
     return _DetailBody(detail: _detail!);
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.secondary),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Tekrar dene'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
