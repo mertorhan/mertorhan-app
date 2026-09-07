@@ -300,7 +300,9 @@ void main() {
     expect(find.text('Henüz fotoğraf yok'), findsOneWidget);
   });
 
-  testWidgets('film ve kitap ogeleri dokunulabilir degil', (tester) async {
+  // KB-112 ile kitap ogesi dokunulabilir oldu; bu test artik yalnizca
+  // film icin gecerli. Galeri de dokunulamaz ama onun ayri testi yok.
+  testWidgets('film ogeleri dokunulabilir degil', (tester) async {
     await tester.pumpWidget(
       _wrap(
         PublicationsApis(
