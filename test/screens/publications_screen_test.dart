@@ -102,6 +102,8 @@ Book _book(String title) => Book(
   rating: null,
   summary: '',
   publishedAt: DateTime(2026, 8, 13),
+  releaseYear: null,
+  readAt: null,
   isFeatured: false,
 );
 

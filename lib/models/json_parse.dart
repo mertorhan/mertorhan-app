@@ -65,6 +65,36 @@ num? optionalNum(Map<String, dynamic> json, String key, String label) {
   missing(label, key, value);
 }
 
+/// Ad listeleri icin: ["Dostoyevski", "Tolstoy"].
+///
+/// Bos liste GECERLI bir degerdir, yoklugu degil — kunye alani girilmemis
+/// kitapta [] gelir. Liste degilse veya icinde metin olmayan bir oge varsa
+/// hata; hangi ogenin bozuk oldugu indeksle raporlanir, cunku uzun bir
+/// listede "liste bozuk" demek hata ayiklamaya yetmiyor.
+List<String> requireStringList(
+  Map<String, dynamic> json,
+  String key,
+  String label,
+) {
+  final Object? raw = json[key];
+  if (raw is! List) {
+    throw ApiException.parse(
+      "$label: '$key' liste bekleniyordu, ${raw.runtimeType} geldi",
+    );
+  }
+
+  final List<String> values = [];
+  for (final (int index, Object? item) in raw.indexed) {
+    if (item is! String) {
+      throw ApiException.parse(
+        "$label: $key[$index] metin degil: ${item.runtimeType}",
+      );
+    }
+    values.add(item);
+  }
+  return values;
+}
+
 /// "2026-08-19" bicimindeki metni tarihe cevirir.
 ///
 /// Cozulemezse ApiException firlatilir; yerine bugunun tarihi veya epoch
