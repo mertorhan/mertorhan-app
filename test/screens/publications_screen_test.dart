@@ -10,6 +10,8 @@ import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/api/photos_api.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/book.dart';
+import 'package:mertorhan_app/models/filter_option.dart';
+import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/photo.dart';
 import 'package:mertorhan_app/models/review.dart';
@@ -24,20 +26,45 @@ class _FakeBlogApi extends BlogApi {
   @override
   Future<PagedResponse<BlogPost>> fetchPosts({int page = 1, FilterSelection? selection}) async =>
       _paged(items);
+
+  /// fetchFilterOptions ezilmezse uretim govdesi calisir ve test GERCEK
+  /// aga cikar; sahte API gercek sinifi extend ediyor. Blog ve galeri
+  /// ekrani secenekleri ACILISTA cektigi icin bu kacinilmaz.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
+
 }
 
 class _FakeMoviesApi extends MoviesApi {
-  _FakeMoviesApi({this.items = const [], this.error, this.completer});
+  _FakeMoviesApi({
+    this.items = const [],
+    this.error,
+    this.completer,
+    this.options,
+  });
   final List<Review> items;
   final Object? error;
   final Completer<PagedResponse<Review>>? completer;
+  final FilterOptions? options;
+
+  /// Ekranin fetch'e gecirdigi son secim.
+  FilterSelection? sonSecim;
 
   @override
-  Future<PagedResponse<Review>> fetchReviews({int page = 1, FilterSelection? selection}) async {
+  Future<PagedResponse<Review>> fetchReviews({
+    int page = 1,
+    FilterSelection? selection,
+  }) async {
+    sonSecim = selection;
     if (completer != null) return completer!.future;
     if (error != null) throw error!;
     return _paged(items);
   }
+
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      options ?? const FilterOptions.empty();
 }
 
 class _FakeBooksApi extends BooksApi {
@@ -50,6 +77,12 @@ class _FakeBooksApi extends BooksApi {
     if (error != null) throw error!;
     return _paged(items);
   }
+
+  /// Bu dosyada filtre paneli acilmiyor, ama fetchFilterOptions ezilmezse
+  /// uretim govdesi calisir ve test GERCEK aga cikar. Guvenlik icin.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
 }
 
 class _FakePhotosApi extends PhotosApi {
@@ -62,6 +95,14 @@ class _FakePhotosApi extends PhotosApi {
     if (error != null) throw error!;
     return _paged(items);
   }
+
+  /// fetchFilterOptions ezilmezse uretim govdesi calisir ve test GERCEK
+  /// aga cikar; sahte API gercek sinifi extend ediyor. Blog ve galeri
+  /// ekrani secenekleri ACILISTA cektigi icin bu kacinilmaz.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
+
 }
 
 PagedResponse<T> _paged<T>(List<T> items) =>
@@ -327,5 +368,53 @@ void main() {
       ),
     );
     expect(inkWell.onTap, isNull);
+  });
+
+  testWidgets('sekme degisince filtre secimi KORUNUR', (tester) async {
+    // Kilitli karar 4: secim liste ekraninin State'inde yasiyor ve
+    // PagedListView'in keep-alive'i tum alt agaci canli tutuyor.
+    final movies = _FakeMoviesApi(
+      items: [_review('Bir film')],
+      options: const FilterOptions(
+        groups: {
+          'genre': [FilterOption(value: '1', label: 'Comedy', count: 1)],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        PublicationsApis(
+          blog: _FakeBlogApi(),
+          movies: movies,
+          books: _FakeBooksApi(),
+          photos: _FakePhotosApi(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _gotoTab(tester, 'Film ve dizi');
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tür'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comedy (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Uygula'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filtrele (1)'), findsOneWidget);
+
+    // Baska sekmeye gidip geri don.
+    await _gotoTab(tester, 'Kitap');
+    await _gotoTab(tester, 'Film ve dizi');
+
+    // Secim ve daralmis liste yerinde.
+    expect(find.text('Filtrele (1)'), findsOneWidget);
+    expect(
+      movies.sonSecim,
+      const FilterSelection.empty().toggle('genre', '1'),
+    );
   });
 }
