@@ -10,6 +10,7 @@ import 'package:mertorhan_app/api/paged_response.dart';
 import 'package:mertorhan_app/api/photos_api.dart';
 import 'package:mertorhan_app/models/blog_post.dart';
 import 'package:mertorhan_app/models/book.dart';
+import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/photo.dart';
 import 'package:mertorhan_app/models/review.dart';
@@ -38,6 +39,12 @@ class _FakeMoviesApi extends MoviesApi {
     if (error != null) throw error!;
     return _paged(items);
   }
+
+  /// Bu dosyada filtre paneli acilmiyor, ama fetchFilterOptions ezilmezse
+  /// uretim govdesi calisir ve test GERCEK aga cikar. Guvenlik icin.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
 }
 
 class _FakeBooksApi extends BooksApi {
@@ -50,6 +57,12 @@ class _FakeBooksApi extends BooksApi {
     if (error != null) throw error!;
     return _paged(items);
   }
+
+  /// Bu dosyada filtre paneli acilmiyor, ama fetchFilterOptions ezilmezse
+  /// uretim govdesi calisir ve test GERCEK aga cikar. Guvenlik icin.
+  @override
+  Future<FilterOptions> fetchFilterOptions() async =>
+      const FilterOptions.empty();
 }
 
 class _FakePhotosApi extends PhotosApi {

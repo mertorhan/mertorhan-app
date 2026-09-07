@@ -3,19 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mertorhan_app/api/api_exception.dart';
 import 'package:mertorhan_app/api/movies_api.dart';
 import 'package:mertorhan_app/api/paged_response.dart';
+import 'package:mertorhan_app/models/filter_option.dart';
+import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/review.dart';
 import 'package:mertorhan_app/models/review_detail.dart';
 import 'package:mertorhan_app/screens/movie_detail_screen.dart';
 import 'package:mertorhan_app/screens/movie_list_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
+import 'package:mertorhan_app/widgets/filter_bar.dart';
 import 'package:mertorhan_app/widgets/media_tile.dart';
 
 /// Sahte uygulama: iki uc de ezilir, gercek istek atilmaz.
 ///
 /// Bu dosyada hicbir test aga cikmaz.
 class _FakeMoviesApi extends MoviesApi {
-  _FakeMoviesApi({this.page, this.error});
+  _FakeMoviesApi({this.page, this.error, this.options, this.optionsError});
+
+  /// fetchFilterOptions ezilmezse uretim govdesi calisir ve test GERCEK
+  /// aga cikar; sahte API gercek sinifi extend ediyor.
+  final FilterOptions? options;
+  final Object? optionsError;
+
+  /// Ekranin fetch'e gecirdigi son secim; "dogru selection ile cagrildi
+  /// mi" sorusu ancak boyle cevaplanabilir.
+  FilterSelection? sonSecim;
+  int cagriSayisi = 0;
 
   final PagedResponse<Review>? page;
   final Object? error;
@@ -25,9 +38,20 @@ class _FakeMoviesApi extends MoviesApi {
   ReviewDetail? detail;
 
   @override
-  Future<PagedResponse<Review>> fetchReviews({int page = 1, FilterSelection? selection}) async {
+  Future<PagedResponse<Review>> fetchReviews({
+    int page = 1,
+    FilterSelection? selection,
+  }) async {
+    sonSecim = selection;
+    cagriSayisi++;
     if (error != null) throw error!;
     return this.page!;
+  }
+
+  @override
+  Future<FilterOptions> fetchFilterOptions() async {
+    if (optionsError != null) throw optionsError!;
+    return options ?? const FilterOptions.empty();
   }
 
   @override
@@ -135,5 +159,182 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Henüz film veya dizi yok'), findsOneWidget);
+  });
+
+  // --- KB-112: filtre arayuzu ---
+
+  testWidgets('filtre cubugu listenin ustunde gorunur', (tester) async {
+    final api = _FakeMoviesApi(page: _page([_review()]));
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FilterBar), findsOneWidget);
+    expect(find.text('Filtrele'), findsOneWidget);
+    // Secim yokken Temizle yok.
+    expect(find.text('Temizle'), findsNothing);
+  });
+
+  testWidgets('ilk cekimde selection null gecilir', (tester) async {
+    final api = _FakeMoviesApi(page: _page([_review()]));
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    // Bos secim adres degistirmesin diye null geciliyor degil; bos
+    // FilterSelection geciliyor ve buildPath onu yok sayiyor.
+    expect(api.sonSecim, const FilterSelection.empty());
+  });
+
+  testWidgets('secim yapinca liste yeni selection ile yeniden cekilir', (
+    tester,
+  ) async {
+    final api = _FakeMoviesApi(
+      page: _page([_review()]),
+      options: const FilterOptions(
+        groups: {
+          'genre': [FilterOption(value: '1', label: 'Comedy', count: 1)],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(api.cagriSayisi, 1);
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tür'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comedy (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Uygula'));
+    await tester.pumpAndSettle();
+
+    // ValueKey degisti, PagedListView yeniden kuruldu.
+    expect(api.cagriSayisi, 2);
+    expect(api.sonSecim, const FilterSelection.empty().toggle('genre', '1'));
+    expect(find.text('Filtrele (1)'), findsOneWidget);
+  });
+
+  testWidgets('panel ✕ ile kapatilirsa hicbir sey degismez', (tester) async {
+    final api = _FakeMoviesApi(
+      page: _page([_review()]),
+      options: const FilterOptions(
+        groups: {
+          'genre': [FilterOption(value: '1', label: 'Comedy', count: 1)],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tür'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comedy (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(api.cagriSayisi, 1);
+    expect(find.text('Filtrele'), findsOneWidget);
+  });
+
+  testWidgets('Temizle secimi sifirlar ve listeyi yeniden ceker', (
+    tester,
+  ) async {
+    final api = _FakeMoviesApi(
+      page: _page([_review()]),
+      options: const FilterOptions(
+        groups: {
+          'genre': [FilterOption(value: '1', label: 'Comedy', count: 1)],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tür'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comedy (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Uygula'));
+    await tester.pumpAndSettle();
+    expect(api.cagriSayisi, 2);
+
+    await tester.tap(find.text('Temizle'));
+    await tester.pumpAndSettle();
+
+    expect(api.cagriSayisi, 3);
+    expect(api.sonSecim, const FilterSelection.empty());
+    expect(find.text('Temizle'), findsNothing);
+  });
+
+  testWidgets('secim varken bos sonuc farkli mesaj gosterir', (tester) async {
+    final api = _FakeMoviesApi(
+      page: _page([]),
+      options: const FilterOptions(
+        groups: {
+          'genre': [FilterOption(value: '1', label: 'Comedy', count: 1)],
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(find.text('Henüz film veya dizi yok'), findsOneWidget);
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tür'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comedy (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Uygula'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bu filtreye uyan film veya dizi yok'), findsOneWidget);
+  });
+
+  testWidgets('secenek bos donerse panel acilmaz, SnackBar cikar', (
+    tester,
+  ) async {
+    // Canlida /filters/books/ boyle; film icin de gecerli olabilir.
+    final api = _FakeMoviesApi(page: _page([_review()]));
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Şu an filtrelenecek bir şey yok.'), findsOneWidget);
+    expect(find.text('Uygula'), findsNothing);
+  });
+
+  testWidgets('secenek cekimi hata verirse ekran calismaya devam eder', (
+    tester,
+  ) async {
+    final api = _FakeMoviesApi(
+      page: _page([_review()]),
+      optionsError: const ApiException.network(),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filtrele'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(const ApiException.network().userMessage), findsOneWidget);
+    expect(find.text('Uygula'), findsNothing);
+    // Liste yerinde duruyor.
+    expect(find.text('Crazy, Stupid, Love.'), findsOneWidget);
   });
 }
