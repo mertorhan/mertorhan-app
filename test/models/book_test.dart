@@ -39,6 +39,30 @@ const String _tamPuan = '''
 }
 ''';
 
+/// Basim yili ve okuma tarihi dolu.
+const String _kunyeli = '''
+{
+  "id": 5, "slug": "kunyeli", "title": "Künyeli kitap",
+  "author": "Yazar", "translator": "",
+  "cover_image": null, "rating": null,
+  "summary": "", "published_at": "2026-08-01",
+  "release_year": 1866, "read_at": "2026-03-14",
+  "is_featured": false
+}
+''';
+
+/// Canlida su an dort kitabin dordu de boyle: iki alan da null.
+const String _kunyesiz = '''
+{
+  "id": 6, "slug": "kunyesiz", "title": "Künyesiz kitap",
+  "author": "Yazar", "translator": "",
+  "cover_image": null, "rating": null,
+  "summary": "", "published_at": "2026-08-01",
+  "release_year": null, "read_at": null,
+  "is_featured": false
+}
+''';
+
 /// rating metin gelmis.
 const String _bozuk = '''
 {
@@ -77,6 +101,28 @@ void main() {
 
     expect(b.rating, 5);
     expect(b.rating, isA<int>());
+  });
+
+  test('basim yili ve okuma tarihi cozulur', () {
+    final b = _parse(_kunyeli);
+
+    expect(b.releaseYear, 1866);
+    expect(b.readAt, DateTime(2026, 3, 14));
+  });
+
+  test('basim yili ve okuma tarihi null gelebilir', () {
+    final b = _parse(_kunyesiz);
+
+    expect(b.releaseYear, isNull);
+    expect(b.readAt, isNull);
+  });
+
+  test('release_year ve read_at anahtarlari hic yoksa da cozulur', () {
+    // Eski kayitlarda alanlar sozlesmede yoktu; yoklugu hata degil.
+    final b = _parse(_cevirmensiz);
+
+    expect(b.releaseYear, isNull);
+    expect(b.readAt, isNull);
   });
 
   test('yanlis tipli rating ApiException firlatir', () {

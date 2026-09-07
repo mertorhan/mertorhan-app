@@ -7,6 +7,7 @@ import '../models/blog_post_detail.dart';
 import '../models/post_section.dart';
 import '../theme/app_colors.dart';
 import '../utils/meta_line.dart';
+import '../widgets/quote_box.dart';
 
 /// Tek bir yazinin detayi.
 ///
@@ -296,39 +297,10 @@ class _QuoteBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-
+    // Kutu stili QuoteBox'ta; kitap detayi da ayni kutuyu ciziyor.
+    // Kaynak bos "" gelebilir, o zaman satiri QuoteBox cizmiyor.
     return _Block(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          border: Border(
-            left: BorderSide(color: AppColors.terracotta, width: 3),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              section.text,
-              style: textTheme.bodyLarge?.copyWith(
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            // Kaynak bos "" gelebilir; o zaman satir hic cizilmez.
-            if (section.quoteSource.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                section.quoteSource,
-                style: textTheme.labelMedium?.copyWith(
-                  color: AppColors.secondary,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+      child: QuoteBox(text: section.text, source: section.quoteSource),
     );
   }
 }

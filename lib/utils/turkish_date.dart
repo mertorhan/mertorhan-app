@@ -21,3 +21,10 @@ const List<String> _aylar = [
 /// '19 Ağustos 2026' bicimi.
 String formatTurkishDate(DateTime date) =>
     '${date.day} ${_aylar[date.month]} ${date.year}';
+
+/// 'Mart 2026' bicimi: gun YOK.
+///
+/// Kitabin okunma tarihi icin. Gun basmak "bu kitabi su gun bitirdim"
+/// demek olurdu; veri o kadar kesin degil, ay yeterli.
+String formatTurkishMonthYear(DateTime date) =>
+    '${_aylar[date.month]} ${date.year}';
