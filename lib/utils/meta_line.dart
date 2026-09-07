@@ -22,16 +22,23 @@ String postMetaLine(BlogPost post) => joinMeta([
   '${post.readingTime} dk',
 ]);
 
-/// Film/dizi: tur · yil · puan
+/// Icerik turunun gorunen etiketi.
 ///
-/// contentKind null ise (sunucudan taninmayan bir tur geldiyse) etiket
-/// duser, kayit yine listelenir.
+/// contentKind null ise (sunucudan taninmayan bir tur geldiyse) null
+/// doner ve etiket duser; kayit yine gosterilir.
+///
+/// Ayri fonksiyon, cunku liste ust satiri ile detay ust satiri ayni
+/// etiketi kullaniyor ama farkli parcalarla: detayda yapim yili yok,
+/// o kunyeye ait.
+String? contentKindLabel(ContentKind? kind) => switch (kind) {
+  ContentKind.film => 'Film',
+  ContentKind.dizi => 'Dizi',
+  null => null,
+};
+
+/// Film/dizi: tur · yil · puan
 String reviewMetaLine(Review review) => joinMeta([
-  switch (review.contentKind) {
-    ContentKind.film => 'Film',
-    ContentKind.dizi => 'Dizi',
-    null => null,
-  },
+  contentKindLabel(review.contentKind),
   review.releaseYear?.toString(),
   review.rating == null ? null : formatRating(review.rating!),
 ]);
