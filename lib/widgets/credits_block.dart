@@ -17,7 +17,8 @@ import '../theme/app_colors.dart';
 ///
 /// ETIKETLER kaynakta dogrudan buyuk harfle yazilir; toUpperCase
 /// cagrilmaz. Turkce'de 'i' buyuyunce 'İ' olmali, Dart'in varsayilani
-/// 'I' verir.
+/// 'I' verir. API'den GELEN metinlerde ise kaynakta duzeltme sansi yok;
+/// onlar icin turkish_case.dart'taki turkishUpper kullanilir.
 class CreditsBlock extends StatelessWidget {
   const CreditsBlock({required this.rows, super.key});
 
