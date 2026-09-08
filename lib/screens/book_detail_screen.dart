@@ -15,8 +15,14 @@ import '../widgets/quote_box.dart';
 
 /// Tek bir kitabin detayi.
 ///
-/// Govde duz metin olarak basilir; markdown islenmiyor (blog detayindaki
-/// kararin aynisi, site tarafinda da islenmiyor).
+/// Govde ve alintilar DUZ METIN olarak basilir; markdown islenmez.
+///
+/// Gerekce artik blog detayina atif DEGIL — blog farkli davraniyor,
+/// oradaki paragraf ve alinti bloklari markdown'dan geciyor. Burada
+/// islenmemesinin sebebi sitenin kendisi: kitap govdesi
+/// {{ book.body|linebreaks }}, alintilar {{ quote.text|linebreaksbr }}
+/// filtresinden geciyor, ikisinde de markdown yok. Buraya markdown
+/// koymak siteyle AYRISMA uretirdi.
 class BookDetailScreen extends StatefulWidget {
   const BookDetailScreen({required this.slug, this.api, super.key});
 
@@ -184,7 +190,15 @@ class _DetailBody extends StatelessWidget {
           Padding(
             padding: _side.copyWith(top: 8, bottom: 8),
             // Sayfa bos "" gelebilir; o zaman satiri QuoteBox cizmiyor.
-            child: QuoteBox(text: quote.text, source: quote.page),
+            //
+            // markdown: false — sitede kitap alintisi
+            // {{ quote.text|linebreaksbr }} filtresinden geciyor, yani
+            // ham metin. Blog alintisindan ayrilan tek yer burasi.
+            child: QuoteBox(
+              text: quote.text,
+              source: quote.page,
+              markdown: false,
+            ),
           ),
       ],
     );

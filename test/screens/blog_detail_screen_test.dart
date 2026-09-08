@@ -9,6 +9,8 @@ import 'package:mertorhan_app/models/blog_post_detail.dart';
 import 'package:mertorhan_app/models/post_section.dart';
 import 'package:mertorhan_app/screens/blog_detail_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
+import 'package:mertorhan_app/widgets/quote_box.dart';
+import 'package:mertorhan_app/widgets/site_markdown.dart';
 
 /// Sahte uygulama: fetchPost ezilir, gercek istek atilmaz.
 class _FakeBlogApi extends BlogApi {
@@ -294,5 +296,116 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  // --- KB-113: markdown baglama ---
+
+  testWidgets('paragraf blogu SiteMarkdown ile ciziliyor', (tester) async {
+    // Sitede {{ section.text|markdown }}; mobil de ayni yerden geciyor.
+    final api = _FakeBlogApi(
+      detail: _detail([
+        _section(
+          order: 10,
+          kind: SectionKind.paragraph,
+          text: 'Duz bir paragraf.',
+        ),
+      ]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SiteMarkdown), findsOneWidget);
+    expect(find.text('Duz bir paragraf.'), findsOneWidget);
+  });
+
+  testWidgets('paragrafta kalin isleniyor, yildizlar ekranda YOK', (
+    tester,
+  ) async {
+    final api = _FakeBlogApi(
+      detail: _detail([
+        _section(
+          order: 10,
+          kind: SectionKind.paragraph,
+          text: 'Bu **kalin** bir paragraf.',
+        ),
+      ]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bu kalin bir paragraf.'), findsOneWidget);
+    expect(find.textContaining('**'), findsNothing);
+  });
+
+  testWidgets('alinti blogu markdown ile ciziliyor', (tester) async {
+    // Sitede alinti blogu da {{ section.text|markdown }} filtresinden
+    // geciyor; QuoteBox'a markdown: true veriliyor.
+    final api = _FakeBlogApi(
+      detail: _detail([
+        _section(
+          order: 10,
+          kind: SectionKind.quote,
+          text: 'Bu **kalin** bir alinti.',
+          quoteSource: 'Scrum Guide',
+        ),
+      ]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QuoteBox), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(QuoteBox),
+        matching: find.byType(SiteMarkdown),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Bu kalin bir alinti.'), findsOneWidget);
+    expect(find.textContaining('**'), findsNothing);
+    // Kaynak satiri kutu stiline ait, markdown'dan gecmiyor.
+    expect(find.text('Scrum Guide'), findsOneWidget);
+  });
+
+  testWidgets('markdown alinti ITALIGINI koruyor', (tester) async {
+    // Olculdu: SiteMarkdown ortam DefaultTextStyle'ini okumuyor, italik
+    // yalnizca tema bodyLarge uzerinden gecebiliyor. QuoteBox bunu boyle
+    // yapiyor; test o mekanizmanin ayakta oldugunu civiliyor.
+    final api = _FakeBlogApi(
+      detail: _detail([
+        _section(order: 10, kind: SectionKind.quote, text: 'Alinti metni.'),
+      ]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    final Text w = tester.widget<Text>(find.text('Alinti metni.'));
+    final TextStyle? stil = w.textSpan?.style ?? w.style;
+    expect(stil?.fontStyle, FontStyle.italic);
+  });
+
+  testWidgets('baslik blogu markdown DEGIL, duz Text', (tester) async {
+    // Sitede baslik markdown filtresinden GECMIYOR.
+    final api = _FakeBlogApi(
+      detail: _detail([
+        _section(
+          order: 10,
+          kind: SectionKind.heading,
+          text: 'Bu **kalin** baslik',
+          headingLevel: 'h2',
+        ),
+      ]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SiteMarkdown), findsNothing);
+    // Yildizlar ekranda duruyor.
+    expect(find.text('Bu **kalin** baslik'), findsOneWidget);
   });
 }

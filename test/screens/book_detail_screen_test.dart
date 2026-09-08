@@ -10,6 +10,7 @@ import 'package:mertorhan_app/models/book_quote.dart';
 import 'package:mertorhan_app/screens/book_detail_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 import 'package:mertorhan_app/widgets/quote_box.dart';
+import 'package:mertorhan_app/widgets/site_markdown.dart';
 
 /// Sahte uygulama: fetchBook ezilir, gercek istek atilmaz.
 ///
@@ -345,5 +346,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  // --- KB-113: kitap alintisi markdown'dan GECMIYOR ---
+
+  testWidgets('kitap alintisi SiteMarkdown ICERMIYOR', (tester) async {
+    // Sitede {{ quote.text|linebreaksbr }}; markdown yok. Buraya markdown
+    // koymak siteyle ayrisma uretirdi.
+    final api = _FakeBooksApi(
+      detail: _detail(
+        quotes: const [BookQuote(order: 1, text: 'Alinti metni.', page: '')],
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QuoteBox), findsOneWidget);
+    expect(find.byType(SiteMarkdown), findsNothing);
+  });
+
+  testWidgets('kitap alintisinda yildizlar ekranda VAR', (tester) async {
+    final api = _FakeBooksApi(
+      detail: _detail(
+        quotes: const [
+          BookQuote(order: 1, text: 'Bu **kalin** bir alinti.', page: ''),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    // Ham metin: markdown islenmedigi icin yildizlar duruyor.
+    expect(find.text('Bu **kalin** bir alinti.'), findsOneWidget);
   });
 }
