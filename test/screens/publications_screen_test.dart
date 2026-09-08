@@ -17,6 +17,7 @@ import 'package:mertorhan_app/models/photo.dart';
 import 'package:mertorhan_app/models/review.dart';
 import 'package:mertorhan_app/screens/publications_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
+import 'package:mertorhan_app/widgets/photo_grid.dart';
 
 /// Sahte uygulamalar: hicbiri gercek istek atmaz.
 class _FakeBlogApi extends BlogApi {
@@ -223,8 +224,9 @@ void main() {
     expect(find.text('Bir Yazar'), findsOneWidget);
 
     await _gotoTab(tester, 'Galeri');
-    expect(find.text('Bir fotograf'), findsOneWidget);
-    expect(find.text('Manzara · Muğla'), findsOneWidget);
+    // Galeri masonry izgara: yazi yok, kayit numarasindan bulunuyor.
+    expect(find.byKey(PhotoGrid.tileKey(4)), findsOneWidget);
+    expect(find.text('Bir fotograf'), findsNothing);
   });
 
   testWidgets('sekme degisince onceki listenin verisi kalmaz', (tester) async {
@@ -342,9 +344,10 @@ void main() {
     expect(find.text('Henüz fotoğraf yok'), findsOneWidget);
   });
 
-  // KB-112 ile kitap ve film ogesi dokunulabilir oldu, KB-114 ile galeri
-  // de: artik dort turun dordu de bir sey aciyor.
-  testWidgets('galeri ogeleri de dokunulabilir', (tester) async {
+  // Dort turun dordu de bir sey aciyor: uc tur detay ekranini, galeri
+  // tam ekran goruntuleyiciyi. Galeride yazi olmadigi icin kutucuk
+  // kayit numarasindan bulunuyor.
+  testWidgets('galeri kutucugu da dokunulabilir', (tester) async {
     await tester.pumpWidget(
       _wrap(
         PublicationsApis(
@@ -360,8 +363,8 @@ void main() {
     await _gotoTab(tester, 'Galeri');
 
     final InkWell inkWell = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('Bir fotograf'),
+      find.descendant(
+        of: find.byKey(PhotoGrid.tileKey(4)),
         matching: find.byType(InkWell),
       ),
     );

@@ -6,13 +6,17 @@ import '../api/photos_api.dart';
 import '../models/filter_option.dart';
 import '../models/filter_selection.dart';
 import '../models/photo.dart';
-import '../utils/meta_line.dart';
 import '../widgets/filter_chips.dart';
-import '../widgets/media_tile.dart';
 import '../widgets/paged_list_view.dart';
+import '../widgets/photo_grid.dart';
 import 'photo_viewer_screen.dart';
 
 /// Yayinlar > Galeri sekmesinin govdesi.
+///
+/// Duzen MASONRY IZGARA: iki kolon, fotograflar kendi en-boy oranlariyla,
+/// altlarinda YAZI YOK. Diger uc sekmenin MediaTile'li dikey listesinden
+/// bilerek ayrilir — sitedeki galeri de boyle. Baslik, kategori ve konum
+/// yalnizca tam ekranda gorunur.
 ///
 /// Fotografa dokununca PhotoViewerScreen tam ekran acilir. Goruntuleyici
 /// API'ye GITMEZ: cekilmis liste oldugu gibi ona gecer, orada yana
@@ -150,14 +154,11 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
             emptyMessage: _selection.isEmpty
                 ? 'Henüz fotoğraf yok'
                 : 'Bu filtreye uyan fotoğraf yok',
-            itemBuilder: (_, Photo photo) => MediaTile(
-              // Kucuk gorsel varsa o, yoksa tam boy; ikisi de yoksa yer
-              // tutucu.
-              imageUrl: photo.listImage,
-              metaLine: photoMetaLine(photo),
-              title: photo.title,
-              onTap: () => _openViewer(photo),
-            ),
+            // itemBuilder DEGIL bodyBuilder: izgara ogeleri tek tek
+            // alamaz, kolonlara dagitmak icin hepsini birden gormesi
+            // gerekiyor.
+            bodyBuilder: (_, List<Photo> photos) =>
+                PhotoGrid(photos: photos, onPhotoTap: _openViewer),
           ),
         ),
       ],
