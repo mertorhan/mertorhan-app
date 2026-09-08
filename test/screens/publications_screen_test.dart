@@ -342,9 +342,9 @@ void main() {
     expect(find.text('Henüz fotoğraf yok'), findsOneWidget);
   });
 
-  // KB-112 ile once kitap, sonra film ogesi dokunulabilir oldu. Geriye
-  // yalnizca galeri kaldi: tam ekran goruntuleme ayri kart.
-  testWidgets('galeri ogeleri dokunulabilir degil', (tester) async {
+  // KB-112 ile kitap ve film ogesi dokunulabilir oldu, KB-114 ile galeri
+  // de: artik dort turun dordu de bir sey aciyor.
+  testWidgets('galeri ogeleri de dokunulabilir', (tester) async {
     await tester.pumpWidget(
       _wrap(
         PublicationsApis(
@@ -359,15 +359,13 @@ void main() {
 
     await _gotoTab(tester, 'Galeri');
 
-    // Tam ekran goruntuleme yok; onTap verilmedigi icin InkWell tepkisiz
-    // olmali.
     final InkWell inkWell = tester.widget<InkWell>(
       find.ancestor(
         of: find.text('Bir fotograf'),
         matching: find.byType(InkWell),
       ),
     );
-    expect(inkWell.onTap, isNull);
+    expect(inkWell.onTap, isNotNull);
   });
 
   testWidgets('sekme degisince filtre secimi KORUNUR', (tester) async {

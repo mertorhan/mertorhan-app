@@ -32,8 +32,11 @@ class MediaTile extends StatelessWidget {
   /// bir degerdir; null kontrolu yetmez.
   final String summary;
 
-  /// Verilmezse oge dokunulabilir gorunmez. Film, kitap ve galeride
-  /// detay ekrani yok, bu yuzden onTap gecilmiyor.
+  /// Verilmezse oge dokunulabilir gorunmez.
+  ///
+  /// Dort turun dordu de artik bir sey aciyor: blog, film ve kitap detay
+  /// ekranini, galeri tam ekran goruntuleyiciyi. Yine de zorunlu
+  /// degil — verilmeyen bir oge sessizce dokunulamaz kalir.
   final VoidCallback? onTap;
 
   @override
