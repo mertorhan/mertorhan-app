@@ -82,6 +82,15 @@ List<BoxDecoration> _gorunurBezemeler(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('bos metin istisna atmiyor, widget ciziliyor', (tester) async {
+    // 2. adimda bos blok gelebilir; widget yorumu "bos gelebilir" diyor,
+    // kaniti burada.
+    await tester.pumpWidget(_wrap(''));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(SiteMarkdown), findsOneWidget);
+  });
+
   // =================== ACIK KUME ===================
 
   testWidgets('kalin isleniyor', (tester) async {
@@ -163,18 +172,28 @@ void main() {
 
   // =================== KAPALI KUME ===================
 
-  testWidgets('h1 ve h6 punto olarak govde paragrafiyla ayni', (tester) async {
-    await tester.pumpWidget(_wrap('# Buyuk\n\n###### Kucuk\n\n$_referans'));
+  testWidgets('h1..h6 ALTISI da punto olarak govde paragrafiyla ayni', (
+    tester,
+  ) async {
+    // Altisi ayri stil alani (h1..h6). Yalnizca ucunu sinamak, ornegin
+    // h3: body satirinin silinmesini hicbir testin yakalamamasi demek.
+    final String kaynak = <String>[
+      for (int i = 1; i <= 6; i++) '${'#' * i} Seviye$i',
+      _referans,
+    ].join('\n\n');
+
+    await tester.pumpWidget(_wrap(kaynak));
 
     final double? govde = _stil(tester, _referans)?.fontSize;
+    final String? govdeFont = _stil(tester, _referans)?.fontFamily;
     expect(govde, isNotNull);
-    expect(_stil(tester, 'Buyuk')?.fontSize, govde);
-    expect(_stil(tester, 'Kucuk')?.fontSize, govde);
-    // Font ailesi de ayni; baslik serif katmanina kacmiyor.
-    expect(
-      _stil(tester, 'Buyuk')?.fontFamily,
-      _stil(tester, _referans)?.fontFamily,
-    );
+
+    for (int i = 1; i <= 6; i++) {
+      final TextStyle? stil = _stil(tester, 'Seviye$i');
+      expect(stil?.fontSize, govde, reason: 'h$i puntosu govdeden farkli');
+      // Font ailesi de ayni; baslik serif katmanina kacmiyor.
+      expect(stil?.fontFamily, govdeFont, reason: 'h$i fontu govdeden farkli');
+    }
   });
 
   testWidgets('lheading punto olarak govde paragrafiyla ayni', (tester) async {
@@ -188,11 +207,21 @@ void main() {
     );
   });
 
-  testWidgets('satir ici kod zeminsiz ve govde fontunda', (tester) async {
+  testWidgets('satir ici kod govde fontunda: BILINCLI AYRISMA', (tester) async {
+    // Bu bir "kapali kural duzlesti" testi DEGIL. Sitede <code> icin hic
+    // CSS yok, yani tarayici varsayilani tek arali font veriyor; burada
+    // govde fontuna indirildi. Ayrisma BILEREK secildi:
+    //
+    // MarkdownStyleSheet'te TEK bir `code` alani var ve hem satir ici
+    // kodu hem kod blogunun icerigini besliyor. Tek arali yapsak, dort
+    // boslukla girintilenmis siradan bir paragraf da kod gibi gorunurdu —
+    // sitenin "code" blok kuralini kapatarak onledigi sey tam olarak bu.
+    // Icerik kaybi yok, yalnizca yazi tipi farki.
+    //
+    // Bezeme taramasi burayi GOREMEZ: satir ici kod zemini
+    // TextStyle.backgroundColor'da tasiniyor, Container bezemesinde degil.
     await tester.pumpWidget(_wrap('`kod`\n\n$_referans'));
 
-    // Bezeme taramasi bunu GOREMEZ: satir ici kod zemini
-    // TextStyle.backgroundColor'da tasiniyor, Container bezemesinde degil.
     final TextStyle? stil = _stil(tester, 'kod');
     expect(stil?.backgroundColor, isNull);
     expect(stil?.fontFamily, _stil(tester, _referans)?.fontFamily);
@@ -212,17 +241,42 @@ void main() {
     expect(_stil(tester, 'kodblok')?.backgroundColor, isNull);
   });
 
-  testWidgets('citli blok kutusuz ve govde puntosunda', (tester) async {
-    // Girintili koddan AYRI kural, ayri stil alani; biri duzlesti diye
-    // digeri duzlesmis sayilmaz.
+  testWidgets('citli blok sitedekiyle ayni: isaretler yutulur, kutu yok', (
+    tester,
+  ) async {
+    // PARITE testi. Sitede kapali olan "fence" BLOK kuralidir; ters
+    // tirnak ("backticks") ayri bir SATIR ICI kuraldir ve sitede ACIK.
+    // Yani "```" isaretleri sitede de yutuluyor:
+    //   "```\nkodblok\n```"  ->  "<p><code>kodblok</code></p>"
+    //
+    // Fenced blok ayristirmasi extensionSet'ten cikarilinca mobil de tam
+    // buraya geliyor: isaretler yutulur, icerik satir ici kod olur, pre
+    // kutusu hic olusmaz.
     await tester.pumpWidget(_wrap('```\nkodblok\n```\n\n$_referans'));
 
+    expect(find.text('kodblok'), findsOneWidget);
+    // Isaretler ekranda YOK — sitede de yok.
+    expect(find.textContaining('```'), findsNothing);
+    // pre kutusu olusmadi.
     expect(_gorunurBezemeler(tester), isEmpty);
     expect(
       _stil(tester, 'kodblok')?.fontSize,
       _stil(tester, _referans)?.fontSize,
     );
-    expect(_stil(tester, 'kodblok')?.backgroundColor, isNull);
+  });
+
+  testWidgets('satir ici HTML harfiyen gorunuyor, bicimlendirmiyor', (
+    tester,
+  ) async {
+    // Sitede html: false; "<b>" ekranda harfiyen gorunuyor.
+    await tester.pumpWidget(_wrap('metin <b>kalin</b> devam'));
+
+    expect(find.text('metin <b>kalin</b> devam'), findsOneWidget);
+    // Etiket bicimlendirmeye donusmedi.
+    expect(
+      _tumStiller(tester).any((TextStyle s) => s.fontWeight == FontWeight.bold),
+      isFalse,
+    );
   });
 
   testWidgets('yatay cizgi cizilmiyor', (tester) async {

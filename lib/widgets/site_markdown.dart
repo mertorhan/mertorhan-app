@@ -16,11 +16,24 @@ import '../theme/app_colors.dart';
 /// KAPALI kurallar UC AYRI MEKANIZMAYLA duzlestiriliyor; hangisinin neden
 /// secildigi asagida:
 ///
-/// 1. extensionSet — AYRISTIRICI katmani. Tablo, emoji, dipnot ve
-///    bare-URL otomatik baglanti stil tablosuyla kapatilamaz, cunku
-///    metin daha ayristirilirken elemente donusuyor. CommonMark tabani
-///    bunlarin dordunu de zaten ayristirmiyor; uzerine yalnizca ustu
-///    cizili ekleniyor.
+/// 1. extensionSet — AYRISTIRICI katmani. Tablo, emoji, dipnot,
+///    bare-URL otomatik baglanti, CIT ILE KOD BLOGU ve SATIR ICI HTML
+///    stil tablosuyla kapatilamaz, cunku metin daha ayristirilirken
+///    elemente donusuyor. Kume sifirdan kuruluyor: bos listeden baslanip
+///    yalnizca ustu cizili ekleniyor.
+///
+///    CIT: sitede kapali olan "fence" BLOK kuralidir; ters tirnak
+///    ("backticks") ayri bir SATIR ICI kuraldir ve sitede ACIK. Yani
+///    "```" isaretleri sitede de yutuluyor, icerik satir ici koda
+///    donusuyor: "```\nkodblok\n```" -> "<p><code>kodblok</code></p>".
+///    Fenced blok ayristirmasini kaldirmak bizi tam oraya getiriyor —
+///    isaretler yutulur, pre kutusu olusmaz. Bu ayrisma degil, PARITE.
+///
+///    SATIR ICI HTML: sitede kapali (html: false). Kaldirildi; olcum
+///    zaten kaldirmadan once de "<b>" harfiyen goruntugunu gosterdi,
+///    cunku InlineHtmlSyntax bir gecirgen. Yine de acikca disarida
+///    birakildi: niyet okunsun ve paket bunu ileride bir elemente
+///    cevirirse bizi korusun.
 ///
 /// 2. MarkdownStyleSheet — CIZIM katmani. Baslik, kod, kod blogu, yatay
 ///    cizgi ve alinti ayristiriliyor ama govde paragrafiyla ayni stile
@@ -35,11 +48,23 @@ import '../theme/app_colors.dart';
 /// ham gorunuyor, alt metin bunun en yakin karsiligi. Alt metin bossa
 /// basilacak bir sey de yok, o zaman hic cizilmez.
 ///
-/// KAPATILAMAYAN TEK KURAL: reference. Sitede "[bag][1]" ve
-/// "[1]: https://ornek.com" satirlarinin ikisi de duz metin gorunuyor;
-/// burada ilki baglanti olur, ikinci satir yutulur. CommonMark bunu
-/// cekirdekte ayristiriyor, ExtensionSet'ten cikarilamiyor. Davranis
-/// testle civilendi (site_markdown_test.dart, "bilinen ayrisma").
+/// BILINEN AYRISMALAR — ikisi de testle civilendi, sessizce kaymasin:
+///
+/// A. reference. Sitede "[bag][1]" ve "[1]: https://ornek.com"
+///    satirlarinin ikisi de duz metin gorunuyor; burada ilki baglanti
+///    olur, ikinci satir yutulur. CommonMark bunu cekirdekte
+///    ayristiriyor, ExtensionSet'ten cikarilamiyor. KAPATILAMIYOR.
+///
+/// B. Satir ici kodun YAZI TIPI. Sitede <code> icin hic CSS yok, yani
+///    tarayici varsayilani tek arali fontu veriyor. Burada code alani
+///    govde stiline indirgendi, tek arali degil.
+///
+///    Duzlestirme BILEREK kaliyor. Sebep: MarkdownStyleSheet'te TEK bir
+///    `code` alani var ve o alan hem satir ici kodu HEM kod blogunun
+///    icerigini besliyor. Tek arali yapsak, dort boslukla girintilenmis
+///    siradan bir paragraf da kod gibi gorunurdu — sitenin "code" blok
+///    kuralini kapatarak onledigi sey tam olarak bu. Iki ayrismadan az
+///    zararlisi secildi: icerik kaybi yok, yalnizca yazi tipi farki.
 ///
 /// KENDI KAYDIRMASINI YAPMAZ: cagiran taraf zaten kaydirilabilir bir
 /// govdenin icinde (blog detayi bir ListView).
@@ -49,19 +74,27 @@ class SiteMarkdown extends StatelessWidget {
   /// Ham markdown. Bos "" gelebilir; paket bos govdeyi sorunsuz ciziyor.
   final String text;
 
-  /// CommonMark tabani + YALNIZCA ustu cizili.
+  /// SIFIRDAN kuruluyor: hicbir hazir kume devralinmiyor, uzerine
+  /// YALNIZCA ustu cizili ekleniyor.
   ///
-  /// Paketin varsayilani md.ExtensionSet.gitHubFlavored; o tabloyu,
-  /// dipnotu ve bare-URL otomatik baglantiyi aciyor. commonMark ise
-  /// yalnizca cit ile kod blogu ve satir ici HTML tasiyor.
+  /// Neden devral-buda degil: commonMark tam olarak iki sey tasiyor —
+  /// FencedCodeBlockSyntax ve InlineHtmlSyntax (olculdu, paket kaynagi).
+  /// Ikisi de sitede KAPALI. Devralinsaydi ikisini de ayrica cikarmak
+  /// gerekirdi; bos listeden baslamak niyeti dogrudan yaziyor.
+  ///
+  /// Bu kume md.ExtensionSet.none + ustu cizili ile ayni; none'in kendi
+  /// belgesi de "fenced code block ve inline HTML olmadan CommonMark"
+  /// diyor. Acikca yazildi ki neyin neden disarida oldugu okunsun.
+  ///
+  /// ExtensionSet yalnizca EKLER; cekirdek sozdizimleri (vurgu, kod,
+  /// baglanti, satir sonu, baslik, liste, alinti, yatay cizgi, girintili
+  /// kod) bundan bagimsiz ve bos kume onlari dusurmuyor. Acik kumenin
+  /// yedisi de bu yuzden ayakta.
   ///
   /// static: her build'de yeniden kurulmasin, ayristirici kumesi sabit.
   static final md.ExtensionSet _extensionSet = md.ExtensionSet(
-    md.ExtensionSet.commonMark.blockSyntaxes,
-    <md.InlineSyntax>[
-      ...md.ExtensionSet.commonMark.inlineSyntaxes,
-      md.StrikethroughSyntax(),
-    ],
+    <md.BlockSyntax>[],
+    <md.InlineSyntax>[md.StrikethroughSyntax()],
   );
 
   @override
