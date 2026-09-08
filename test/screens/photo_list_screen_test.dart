@@ -8,6 +8,7 @@ import 'package:mertorhan_app/models/filter_options.dart';
 import 'package:mertorhan_app/models/filter_selection.dart';
 import 'package:mertorhan_app/models/photo.dart';
 import 'package:mertorhan_app/screens/photo_list_screen.dart';
+import 'package:mertorhan_app/screens/photo_viewer_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 import 'package:mertorhan_app/widgets/filter_chips.dart';
 
@@ -45,8 +46,8 @@ class _FakePhotosApi extends PhotosApi {
   }
 }
 
-Photo _photo({String title = 'Bir fotoğraf'}) => Photo(
-  id: 1,
+Photo _photo({int id = 1, String title = 'Bir fotoğraf'}) => Photo(
+  id: id,
   title: title,
   image: null,
   thumbnail: null,
@@ -98,8 +99,7 @@ void main() {
     expect(find.text('Manzara · Muğla'), findsOneWidget);
   });
 
-  testWidgets('oge dokunulabilir DEGIL', (tester) async {
-    // Tam ekran goruntuleme ayri kart; onTap verilmiyor.
+  testWidgets('oge artik dokunulabilir', (tester) async {
     final api = _FakePhotosApi(page: _page([_photo()]));
 
     await tester.pumpWidget(_wrap(api));
@@ -111,7 +111,41 @@ void main() {
         matching: find.byType(InkWell),
       ),
     );
-    expect(inkWell.onTap, isNull);
+    expect(inkWell.onTap, isNotNull);
+  });
+
+  testWidgets('tile\'a dokununca tam ekran goruntuleyici acilir', (
+    tester,
+  ) async {
+    final api = _FakePhotosApi(
+      page: _page([_photo(title: 'Birinci'), _photo(id: 2, title: 'İkinci')]),
+    );
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(find.byType(PhotoViewerScreen), findsNothing);
+
+    await tester.tap(find.text('İkinci'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PhotoViewerScreen), findsOneWidget);
+    // Dokunulan fotografla acildi, listenin basindan degil.
+    expect(find.text('2 / 2'), findsOneWidget);
+  });
+
+  testWidgets('goruntuleyici acilirken YENI ISTEK ATILMAZ', (tester) async {
+    final api = _FakePhotosApi(page: _page([_photo()]));
+
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(api.cagriSayisi, 1);
+
+    await tester.tap(find.text('Bir fotoğraf'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PhotoViewerScreen), findsOneWidget);
+    // Elde duran liste oldugu gibi gecti.
+    expect(api.cagriSayisi, 1);
   });
 
   testWidgets('hata durumunda mesaj ve Tekrar dene gorunur', (tester) async {

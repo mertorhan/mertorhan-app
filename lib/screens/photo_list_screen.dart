@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
+import '../api/paged_response.dart';
 import '../api/photos_api.dart';
 import '../models/filter_option.dart';
 import '../models/filter_selection.dart';
@@ -9,11 +10,13 @@ import '../utils/meta_line.dart';
 import '../widgets/filter_chips.dart';
 import '../widgets/media_tile.dart';
 import '../widgets/paged_list_view.dart';
+import 'photo_viewer_screen.dart';
 
 /// Yayinlar > Galeri sekmesinin govdesi.
 ///
-/// TAM EKRAN GORUNTULEME YOK: fotografa dokunmak bu kartta bir sey
-/// yapmiyor, o yuzden onTap verilmiyor. Ayri kart.
+/// Fotografa dokununca PhotoViewerScreen tam ekran acilir. Goruntuleyici
+/// API'ye GITMEZ: cekilmis liste oldugu gibi ona gecer, orada yana
+/// kaydirarak gezilir.
 class PhotoListScreen extends StatefulWidget {
   const PhotoListScreen({this.api, super.key});
 
@@ -37,6 +40,18 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
   /// calisir. Filtre bir ek ozellik; yoklugu listeyi engellememeli, bu
   /// yuzden hata saklanmiyor ve kullaniciya gosterilmiyor.
   List<FilterOption> _categories = const [];
+
+  /// Ekranda duran fotograflarin tamami; goruntuleyiciye bu gecer.
+  ///
+  /// PagedListView.itemBuilder yalnizca (context, item) veriyor — ne
+  /// index ne de tam liste. Liste bu yuzden fetch yolunda yakalaniyor:
+  /// PagedListView once fetch'i await eder, SONRA setState -> build ->
+  /// itemBuilder calisir. Yani ilk dokunma mumkun olmadan once burasi
+  /// dolu olur.
+  ///
+  /// setState YOK: bu alan cizime girmiyor, sadece dokunma aninda
+  /// okunuyor.
+  List<Photo> _photos = const [];
 
   @override
   void initState() {
@@ -71,6 +86,34 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
     super.dispose();
   }
 
+  /// PagedListView'in cektigi sayfa; donen liste yolda saklanir.
+  Future<PagedResponse<Photo>> _fetchPhotos() async {
+    final PagedResponse<Photo> page = await _api.fetchPhotos(
+      selection: _selection,
+    );
+    _photos = page.items;
+    return page;
+  }
+
+  /// Tam ekran goruntuleyiciyi acar.
+  ///
+  /// Elde duran liste oldugu gibi gecer, YENI ISTEK ATILMAZ. Index kayit
+  /// numarasindan bulunuyor; Photo'da == override'i yok, kimlik
+  /// karsilastirmasina guvenmek yerine id okunuyor.
+  void _openViewer(Photo photo) {
+    final int index = _photos.indexWhere((Photo p) => p.id == photo.id);
+    // Olmamasi gereken durum: liste ile ekrandaki oge ayrismis. Cokmek
+    // yerine hicbir sey yapilmaz.
+    if (index < 0) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PhotoViewerScreen(photos: _photos, initialIndex: index),
+      ),
+    );
+  }
+
   /// TEK SECIM: sitedeki galeri davranisi boyle. toggle tek basina
   /// yetmez, ikinci degeri EKLERDI; bu yuzden her seferinde bos secimden
   /// baslaniyor.
@@ -101,7 +144,7 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
             // atiliyor ve liste yeni secimle cekiliyor. Bu yaklasim tam
             // da paged_list_view.dart'a DOKUNMAMAK icin secildi.
             key: ValueKey<FilterSelection>(_selection),
-            fetch: () => _api.fetchPhotos(selection: _selection),
+            fetch: _fetchPhotos,
             emptyMessage: _selection.isEmpty
                 ? 'Henüz fotoğraf yok'
                 : 'Bu filtreye uyan fotoğraf yok',
@@ -111,6 +154,7 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
               imageUrl: photo.listImage,
               metaLine: photoMetaLine(photo),
               title: photo.title,
+              onTap: () => _openViewer(photo),
             ),
           ),
         ),
