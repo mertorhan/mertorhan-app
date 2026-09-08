@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:url_launcher/url_launcher.dart';
 
+import '../api/api_client.dart';
 import '../theme/app_colors.dart';
+
+/// Baglantiyi acan islev; true donerse acilmis sayilir.
+///
+/// Ayri bir tip: launchUrl statik bir cagri, dogrudan cagrilirsa sema
+/// kisiti test edilemez. Testler sahte acici veriyor.
+typedef LinkOpener = Future<bool> Function(Uri uri);
+
+/// Uretimdeki acici: harici tarayici.
+Future<bool> _harciTarayicidaAc(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
 
 /// Sitedeki markdown kumesini mobilde ayni sekilde cizer.
 ///
@@ -66,13 +78,46 @@ import '../theme/app_colors.dart';
 ///    kuralini kapatarak onledigi sey tam olarak bu. Iki ayrismadan az
 ///    zararlisi secildi: icerik kaybi yok, yalnizca yazi tipi farki.
 ///
+/// BAGLANTILAR harici tarayicida acilir (LaunchMode.externalApplication).
+/// Sitede metin ici baglantilar ayni sekmede aciliyor; mobildeki en yakin
+/// karsilik uygulamadan cikip tarayiciya gitmek.
+///
+/// YALNIZCA http ve https acilir. tel, sms, mailto, javascript, file ve
+/// semasiz her sey REDDEDILIR.
+///
+/// Gerekce: bugun bu metni yalnizca ben yaziyorum. Ama "girdiyi ben
+/// uretiyorum" bir guvenlik onlemi degil, bir VARSAYIMDIR; varsayimlar
+/// zamanla bozulur. Yarin bir yorum alani, bir ice aktarma ya da baska
+/// bir yazar eklenirse kisit yerinde olsun. Beyaz liste dar tutuldu:
+/// genisletmek kolay, geri almak zordur.
+///
+/// C. BILINEN AYRISMA — mailto. Sitede "mailto:" baglantisi calisiyor,
+///    burada calismiyor. Bilincli kisit; yukaridaki gerekcenin bedeli.
+///
+/// GORELI YOL ("/" ile baslayan) site kokune gore cozulur. Kok adres
+/// HARDCODE EDILMEZ: ApiClient.baseUrl'den turetiliyor, boylece adres
+/// tek yerde kaliyor.
+///
+/// SESSIZ KALINMAZ: sema reddedilirse ya da acma basarisiz olursa
+/// SnackBar cikar. Dokunup hicbir sey olmamasi kullaniciya ariza gibi
+/// gorunur.
+///
 /// KENDI KAYDIRMASINI YAPMAZ: cagiran taraf zaten kaydirilabilir bir
 /// govdenin icinde (blog detayi bir ListView).
 class SiteMarkdown extends StatelessWidget {
-  const SiteMarkdown({required this.text, super.key});
+  const SiteMarkdown({required this.text, this.opener, super.key});
 
   /// Ham markdown. Bos "" gelebilir; paket bos govdeyi sorunsuz ciziyor.
   final String text;
+
+  /// Baglantiyi acan islev. Verilmezse harici tarayici kullanilir.
+  ///
+  /// Testler burayi sahteliyor; gercek launchUrl hicbir testte
+  /// cagrilmiyor.
+  final LinkOpener? opener;
+
+  /// Acilmasina izin verilen semalar.
+  static const Set<String> _izinliSemalar = <String>{'http', 'https'};
 
   /// SIFIRDAN kuruluyor: hicbir hazir kume devralinmiyor, uzerine
   /// YALNIZCA ustu cizili ekleniyor.
@@ -105,6 +150,7 @@ class SiteMarkdown extends StatelessWidget {
     return MarkdownBody(
       data: text,
       extensionSet: _extensionSet,
+      onTapLink: (_, String? href, _) => _bagliyaGit(context, href),
       // Sitedeki breaks=True karsiligi: tek satir sonu satir sonu cizilir.
       softLineBreak: true,
       imageBuilder: (_, _, String? alt) {
@@ -148,5 +194,51 @@ class SiteMarkdown extends StatelessWidget {
         // ayristirmiyor, boru isaretleri duz metin kaliyor.
       ),
     );
+  }
+
+  /// Baglantiyi acar; acilamiyorsa kullaniciya soyler.
+  Future<void> _bagliyaGit(BuildContext context, String? href) async {
+    final Uri? hedef = _hedef(href);
+
+    bool acildi = false;
+    if (hedef != null) {
+      try {
+        acildi = await (opener ?? _harciTarayicidaAc)(hedef);
+      } catch (_) {
+        // Platform kanali patlasa da ekran cokmemeli; kullaniciya ayni
+        // mesaj gider.
+        acildi = false;
+      }
+    }
+
+    if (acildi) return;
+    // await sonrasi agac dagilmis olabilir.
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bağlantı açılamadı')),
+    );
+  }
+
+  /// Acilabilir hedefi cozer; acilamayacaksa null doner.
+  ///
+  /// Iki asama: once goreli yol site kokune baglanir, SONRA sema
+  /// suzulur. Sirasi onemli — once suzseydik goreli yol semasiz oldugu
+  /// icin daha basta elenirdi.
+  Uri? _hedef(String? href) {
+    final String ham = href?.trim() ?? '';
+    if (ham.isEmpty) return null;
+
+    Uri? cozulen = Uri.tryParse(ham);
+    if (cozulen == null) return null;
+
+    // "/blog/x/" gibi yollar site kokune gore cozulur. Kok adres
+    // hardcode degil: ApiClient.baseUrl'den geliyor ve "/" ile baslayan
+    // yol RFC 3986'ya gore taban adresin yolunu tumuyle degistiriyor,
+    // yani /api/v1/ kismi dusuyor.
+    if (!cozulen.hasScheme && ham.startsWith('/')) {
+      cozulen = Uri.parse(ApiClient.baseUrl).resolve(ham);
+    }
+
+    return _izinliSemalar.contains(cozulen.scheme) ? cozulen : null;
   }
 }
