@@ -31,9 +31,26 @@ Uygulama bir vitrin/rehber — reklam panosu değil.
 
 ## Teknik künye
 - Flutter 3.47.2 (stable) · Dart 3.13.2
+- **Alt sınır: Flutter `>=3.44.0`** (`pubspec.lock`). `url_launcher` dayattı;
+  bunun altındaki bir SDK ile `flutter pub get` çözülmez.
 - Yerel: `~/Desktop/mertorhan-app`
 - Depo: github.com/mertorhan/mertorhan-app (ana dal: `main`, **public**)
 - Hedef platformlar: Android + iOS. Web/masaüstü klasörleri bilerek üretilmedi.
+
+### Paketler — altı tane, hepsi doğrudan bağımlılık
+
+| Paket | Sürüm | Ne için |
+|---|---|---|
+| `cupertino_icons` | `^1.0.8` | iOS ikon seti |
+| `google_fonts` | `^8.2.1` | Newsreader + Hanken Grotesk |
+| `http` | `^1.6.0` | API istekleri |
+| `flutter_markdown_plus` | **`1.0.12`** | blog gövdesindeki markdown'ı çizer |
+| `markdown` | **`7.3.1`** | ayrıştırıcı; `ExtensionSet` ve `StrikethroughSyntax` buradan import ediliyor (`flutter_markdown_plus` onları dışa aktarmıyor) |
+| `url_launcher` | **`6.3.2`** | bağlantıları harici tarayıcıda açar |
+
+Son üçünün sürümü **bilerek sabit yazılı** (caret yok): markdown
+ayrıştırıcısının ve bağlantı açma davranışının bir sürüm atlamasıyla sessizce
+değişmesini istemiyoruz. Bu üçünü yükseltmek ayrı bir karardır.
 
 ## 🔒 KİMLİKLER — DEĞİŞTİRİLEMEZ
 
@@ -66,7 +83,12 @@ Tema kurulduğunda renkler **tek yerde** tanımlanır; widget içine sabit renk
 değeri yazılmaz.
 
 ## API
-Taban adres: `https://mertorhan.com/api/v1/`
+Taban adres: `https://www.mertorhan.com/api/v1/`
+
+⚠️ **www zorunlu.** Apex alan adı (`mertorhan.com`) API'yi sunmuyor ve www'ye
+yönlendirmiyor; `/api/...` orada 404 döner. Adres tek yerde tanımlı:
+`api_client.dart` içindeki `ApiClient.baseUrl`. Başka yere kopyalanmaz.
+
 Hepsi salt okunur. Mevcut uçlar: `/blog/`, `/movies/`, `/books/`, `/photos/`.
 Rota (`/routes/`) ucu **henüz yok.**
 
@@ -186,3 +208,7 @@ Emin değilsen dal aç — maliyeti sıfır.
 - `flutter pub upgrade` çalıştırma. `pubspec.yaml` bağımlılık değişikliği
   onaya tabidir.
 - Yeni paket eklemeden önce **sor.** Her bağımlılık kalıcı bir yüktür.
+  Şu an altı paket var (künyedeki tabloya bak); liste bilerek kısa tutuluyor.
+- `flutter_markdown_plus`, `markdown` ve `url_launcher` sürümleri **sabit
+  yazılı** — bunlara caret ekleme. Sürüm yükseltmek ayrı bir karar, ayrı bir
+  kart.
