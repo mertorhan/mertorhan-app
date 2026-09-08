@@ -71,16 +71,26 @@ mağaza kimliğidir. İkisini "tutarlılık" adına eşitleme.
 **Bu dört değerin hiçbirine dokunma.** Gerekiyorsa önce bana sor.
 
 ## Tasarım
-Renkler ve fontlar `mertorhan.com` ile aynı olacak. Henüz `ThemeData`
-kurulmadı — `lib/` şu an `flutter create` demo kodudur.
+Renkler ve fontlar `mertorhan.com` ile aynı. **Tema kurulu**, iki dosyada:
+
+- `lib/theme/app_colors.dart` — `AppColors`, sekiz renk sabiti. Paletin tek
+  kaynağı.
+- `lib/theme/app_theme.dart` — `AppTheme.light`; `ColorScheme`, `TextTheme`,
+  `AppBarTheme`, `NavigationBarThemeData`. Başlıklar Newsreader (serif),
+  gövde Hanken Grotesk (sans); ikisi de `google_fonts` üzerinden geliyor.
+
+Palet, iki depo arasındaki ortak kayıt olduğu için burada da yazılı — sitede
+karşılığı `style.css`. **Bu değerler referanstır; kaynak `app_colors.dart`.
+Ayrışma olursa KOD DOĞRUDUR, künye güncellenir.**
 
 - Zemin `#f4f1e9` · Kart `#fbf9f3`
 - Metin `#232019` · Gövde `#332f29` · İkincil `#5f5a4f`
+- Ayraç `#9a9282`
 - Vurgu `#b4533a` (terracotta) · Durum `#5e8b5a` (yeşil)
-- Font: Newsreader (serif) · Hanken Grotesk (sans)
 
-Tema kurulduğunda renkler **tek yerde** tanımlanır; widget içine sabit renk
-değeri yazılmaz.
+Kural: **widget içine sabit renk değeri (`Color(0x...)`, `Colors.*`) veya
+sabit punto yazılmaz.** Renk `AppColors`'tan, punto
+`Theme.of(context).textTheme` katmanlarından gelir.
 
 ## API
 Taban adres: `https://www.mertorhan.com/api/v1/`
@@ -89,7 +99,12 @@ Taban adres: `https://www.mertorhan.com/api/v1/`
 yönlendirmiyor; `/api/...` orada 404 döner. Adres tek yerde tanımlı:
 `api_client.dart` içindeki `ApiClient.baseUrl`. Başka yere kopyalanmaz.
 
-Hepsi salt okunur. Mevcut uçlar: `/blog/`, `/movies/`, `/books/`, `/photos/`.
+Hepsi salt okunur. Mevcut uçlar:
+
+- Liste ve detay: `/blog/`, `/movies/`, `/books/`, `/photos/`
+- Filtre seçenekleri: `/filters/blog/`, `/filters/movies/`, `/filters/books/`,
+  `/filters/photos/`
+
 Rota (`/routes/`) ucu **henüz yok.**
 
 ⚠️ Sözleşme pürüzleri — model sınıfları yazılırken bilinmeli:
@@ -102,6 +117,13 @@ Rota (`/routes/`) ucu **henüz yok.**
 - Künye ad listeleri alfabetik döner; başrol sırası korunmaz.
 - `/photos/` için detay ucu yok.
 - Sıralama garantisi yok: `published_at` gün hassasiyetlidir.
+- **Sayfa + filtre birlikte 404 üretebilir.** Aralık dışı sayfa
+  `{"detail": "Invalid page."}` döner: `blog/?page=2&category=5` → 404.
+  Filtreye özel değil — `movies/?page=3` filtresiz de 404 verir; filtre
+  sonucu daralttığı için tetiklenmesi kolaylaşıyor. Bugün tetiklenmiyor,
+  çünkü `PagedListView` her zaman ilk sayfayı çekiyor. **Sonsuz kaydırma
+  eklenirse filtre değişince sayfa 1'e sıfırlanmalı**, yoksa kullanıcı
+  sunucu hatası görür.
 
 API adresleri İngilizce, site adresleri Türkçe. API makine yüzü, site insan yüzü.
 
