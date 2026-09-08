@@ -252,17 +252,20 @@ void main() {
     // Fenced blok ayristirmasi extensionSet'ten cikarilinca mobil de tam
     // buraya geliyor: isaretler yutulur, icerik satir ici kod olur, pre
     // kutusu hic olusmaz.
-    await tester.pumpWidget(_wrap('```\nkodblok\n```\n\n$_referans'));
+    //
+    // Cevre metin BILEREK var: cit isaretleri iki ayri sekilde de
+    // yutulabilir — satir ici kod araligi olarak (bizim durum) ya da
+    // fenced BLOK olarak (paketin varsayilani). Ikisini ayirt eden sey
+    // parcalanma: satir ici kalirsa uc satir TEK metin parcasi olur,
+    // blok olsaydi "once" / "kodblok" / "sonra" diye UC ayri parcaya
+    // bolunurdu. Cevre metin olmadan test bu ikisini ayirt edemiyordu.
+    await tester.pumpWidget(_wrap('once\n```\nkodblok\n```\nsonra'));
 
-    expect(find.text('kodblok'), findsOneWidget);
+    expect(find.text('once\nkodblok\nsonra'), findsOneWidget);
     // Isaretler ekranda YOK — sitede de yok.
     expect(find.textContaining('```'), findsNothing);
     // pre kutusu olusmadi.
     expect(_gorunurBezemeler(tester), isEmpty);
-    expect(
-      _stil(tester, 'kodblok')?.fontSize,
-      _stil(tester, _referans)?.fontSize,
-    );
   });
 
   testWidgets('satir ici HTML harfiyen gorunuyor, bicimlendirmiyor', (
@@ -344,10 +347,37 @@ void main() {
     expect(find.text('merhaba :smile:'), findsOneWidget);
   });
 
-  testWidgets('dipnot harfiyen gorunuyor', (tester) async {
+  testWidgets('tanimsiz dipnot harfiyen gorunuyor', (tester) async {
+    // PARITE ama DUYARSIZ: tanim satiri olmadan "[^1]" paketin
+    // varsayilan kumesinde de harfiyen kaliyor, cunku gitHubFlavored'in
+    // satir ici kumesinde dipnot sozdizimi yok — FootnoteDefSyntax bir
+    // BLOK kurali ve yalnizca tanim satirini ayristiriyor. Yani bu test
+    // dogru bir sey soyluyor ama extensionSet'i korumuyor; onu asagidaki
+    // tanimli test yapiyor.
     await tester.pumpWidget(_wrap('metin[^1]'));
 
     expect(find.text('metin[^1]'), findsOneWidget);
+  });
+
+  testWidgets('dipnot TANIMI ile birlikte: BILINEN AYRISMA', (tester) async {
+    // Sitede iki satir da harfiyen gorunuyor (hem footnote hem reference
+    // kapali). Burada oyle degil ve OLAMAZ: tanim satirini cekirdek
+    // LinkReferenceDefinitionSyntax yutuyor, "[^1]" de referans baglantisi
+    // olarak cozuluyor. Yani bu, A maddesindeki reference ayrismasinin
+    // dipnot kiligindaki hali; ayri bir kusur degil.
+    //
+    // Olculen davranis civileniyor:
+    //   bizim kume      -> "metin^1", tanim satiri yok
+    //   gitHubFlavored  -> "metin1" + "1." + "aciklama ↩" (uc parca)
+    // Ikisi farkli oldugu icin bu test extensionSet'i GERCEKTEN koruyor.
+    await tester.pumpWidget(_wrap('metin[^1]\n\n[^1]: aciklama'));
+
+    // Koseli parantezler tuketildi, geriye etiket kaldi.
+    expect(find.text('metin^1'), findsOneWidget);
+    expect(_baglantiStiliVar(tester), isTrue);
+    // Tanim satiri yutuldu; dipnot listesi de olusmadi.
+    expect(find.textContaining('aciklama'), findsNothing);
+    expect(find.textContaining('↩'), findsNothing);
   });
 
   testWidgets('reference baglantisi BILINEN AYRISMA', (tester) async {
