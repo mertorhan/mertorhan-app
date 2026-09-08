@@ -37,6 +37,17 @@ dependencies:
   google_fonts: ^8.2.1
   http: ^1.6.0
 
+  # Blog govdesindeki markdown'i cizer. Surum SABIT (caret yok):
+  # ayristirici davranisi surum atlamasiyla sessizce degismesin.
+  flutter_markdown_plus: 1.0.12
+
+  # flutter_markdown_plus ile zaten geliyor; DOGRUDAN yaziliyor cunku
+  # ExtensionSet ve StrikethroughSyntax buradan import ediliyor
+  # (flutter_markdown_plus onlari disa aktarmiyor). Beyan etmezsek
+  # depend_on_referenced_packages hakli olarak sikayet eder. Surumu de
+  # sabit: ayristiriciyi baskasinin insafina birakmiyoruz.
+  markdown: 7.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
