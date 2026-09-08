@@ -14,13 +14,38 @@ import '../theme/app_colors.dart';
 class PagedListView<T> extends StatefulWidget {
   const PagedListView({
     required this.fetch,
-    required this.itemBuilder,
     required this.emptyMessage,
+    this.itemBuilder,
+    this.bodyBuilder,
     super.key,
-  });
+  }) : assert(
+         (itemBuilder == null) != (bodyBuilder == null),
+         'itemBuilder ile bodyBuilder\'dan tam olarak biri verilmeli',
+       );
 
   final Future<PagedResponse<T>> Function() fetch;
-  final Widget Function(BuildContext context, T item) itemBuilder;
+
+  /// Dolu durumda ogeleri TEK TEK cizer; aralarina ayrac konur.
+  ///
+  /// Dort turden ucunun (blog, film, kitap) kullandigi yol.
+  final Widget Function(BuildContext context, T item)? itemBuilder;
+
+  /// Dolu durumun govdesini bastan kurar; TUM listeyi gorur.
+  ///
+  /// Izgara gibi duzenler ogeyi tek tek alamaz: kolonlara dagitmak icin
+  /// hepsini birden gormek zorundadir. Verilirse ListView yerine bunun
+  /// dondurdugu widget cizilir.
+  ///
+  /// DONDURULEN WIDGET KAYDIRILABILIR OLMALI. RefreshIndicator ancak
+  /// kaydirilabilir bir cocukla calisir; olmazsa asagi cekip yenileme
+  /// sessizce olur, kimse fark etmez. Icerik ekrandan kisa oldugunda da
+  /// calismasi icin AlwaysScrollableScrollPhysics gerekir — asagidaki
+  /// _MessageView ayni sebeple oyle yazilmis.
+  ///
+  /// Yukleniyor, hata ve bos durumlarini ETKILEMEZ; onlar burada, tek
+  /// yerde kalir. Bos liste zaten emptyMessage'a dustugu icin bodyBuilder
+  /// hicbir zaman bos listeyle cagrilmaz.
+  final Widget Function(BuildContext context, List<T> items)? bodyBuilder;
 
   /// API basarili ama hic kayit yoksa gosterilecek satir.
   final String emptyMessage;
@@ -100,13 +125,20 @@ class _PagedListViewState<T> extends State<PagedListView<T>>
         null when _page!.items.isEmpty => _MessageView(
           message: widget.emptyMessage,
         ),
+        // Bos durumdan SONRA geliyor: bodyBuilder bos listeyle cagrilmaz.
+        null when widget.bodyBuilder != null => widget.bodyBuilder!(
+          context,
+          _page!.items,
+        ),
+        // Kurucudaki assert ikisinden tam olarak birinin verildigini
+        // garanti ediyor; buraya dusuldugunde itemBuilder dolu.
         null => ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: _page!.items.length,
           separatorBuilder: (_, _) =>
               const Divider(height: 1, indent: 16, endIndent: 16),
           itemBuilder: (BuildContext context, int index) =>
-              widget.itemBuilder(context, _page!.items[index]),
+              widget.itemBuilder!(context, _page!.items[index]),
         ),
       },
     );

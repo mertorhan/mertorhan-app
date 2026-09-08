@@ -11,6 +11,7 @@ import 'package:mertorhan_app/screens/photo_list_screen.dart';
 import 'package:mertorhan_app/screens/photo_viewer_screen.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 import 'package:mertorhan_app/widgets/filter_chips.dart';
+import 'package:mertorhan_app/widgets/photo_grid.dart';
 
 /// Sahte uygulama: iki uc de ezilir, gercek istek atilmaz.
 ///
@@ -81,40 +82,46 @@ FilterOptions _kategoriler() => const FilterOptions(
 );
 
 /// Ekran sekme govdesi: kendi Scaffold'u yok, uretimde onu
-/// PublicationsScreen sagliyor. MediaTile'daki InkWell Material atasi
-/// istedigi icin test de Scaffold ile sarmaliyor.
+/// PublicationsScreen sagliyor. Izgara kutucugundaki InkWell Material
+/// atasi istedigi icin test de Scaffold ile sarmaliyor.
 Widget _wrap(PhotosApi api) => MaterialApp(
   theme: AppTheme.light,
   home: Scaffold(body: PhotoListScreen(api: api)),
 );
 
+/// Izgarada yazi yok: bir fotografa kayit numarasindan ulasiliyor.
+Finder _kutucuk(int id) => find.byKey(PhotoGrid.tileKey(id));
+
 void main() {
-  testWidgets('dolu listede fotograf basligi gorunur', (tester) async {
+  testWidgets('dolu listede izgara kutucugu cizilir, YAZI YOK', (
+    tester,
+  ) async {
     final api = _FakePhotosApi(page: _page([_photo()]));
 
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bir fotoğraf'), findsOneWidget);
-    expect(find.text('Manzara · Muğla'), findsOneWidget);
+    expect(find.byType(PhotoGrid), findsOneWidget);
+    expect(_kutucuk(1), findsOneWidget);
+    // Baslik, kategori ve konum yalnizca tam ekranda gorunur.
+    expect(find.text('Bir fotoğraf'), findsNothing);
+    expect(find.text('Manzara · Muğla'), findsNothing);
   });
 
-  testWidgets('oge artik dokunulabilir', (tester) async {
+  testWidgets('kutucuk dokunulabilir', (tester) async {
     final api = _FakePhotosApi(page: _page([_photo()]));
 
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
+    // Izgarada yazi olmadigi icin InkWell kutucuk anahtarindan bulunur.
     final InkWell inkWell = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('Bir fotoğraf'),
-        matching: find.byType(InkWell),
-      ),
+      find.descendant(of: _kutucuk(1), matching: find.byType(InkWell)),
     );
     expect(inkWell.onTap, isNotNull);
   });
 
-  testWidgets('tile\'a dokununca tam ekran goruntuleyici acilir', (
+  testWidgets('kutucuga dokununca tam ekran goruntuleyici acilir', (
     tester,
   ) async {
     final api = _FakePhotosApi(
@@ -125,12 +132,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PhotoViewerScreen), findsNothing);
 
-    await tester.tap(find.text('İkinci'));
+    await tester.tap(_kutucuk(2));
     await tester.pumpAndSettle();
 
     expect(find.byType(PhotoViewerScreen), findsOneWidget);
     // Dokunulan fotografla acildi, listenin basindan degil.
     expect(find.text('2 / 2'), findsOneWidget);
+    // Baslik artik burada gorunuyor: tam ekranda yazi var.
+    expect(find.text('İkinci'), findsWidgets);
   });
 
   testWidgets('goruntuleyici acilirken YENI ISTEK ATILMAZ', (tester) async {
@@ -140,7 +149,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.cagriSayisi, 1);
 
-    await tester.tap(find.text('Bir fotoğraf'));
+    await tester.tap(_kutucuk(1));
     await tester.pumpAndSettle();
 
     expect(find.byType(PhotoViewerScreen), findsOneWidget);
@@ -187,7 +196,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FilterChipRow), findsNothing);
-    expect(find.text('Bir fotoğraf'), findsOneWidget);
+    // Izgara yine cizildi: liste calisiyor.
+    expect(_kutucuk(1), findsOneWidget);
   });
 
   testWidgets('secenek cekimi hata verirse ekran calismaya devam eder', (
@@ -203,7 +213,7 @@ void main() {
 
     // Filtre bir ek ozellik; yoklugu listeyi engellemiyor.
     expect(find.byType(FilterChipRow), findsNothing);
-    expect(find.text('Bir fotoğraf'), findsOneWidget);
+    expect(_kutucuk(1), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

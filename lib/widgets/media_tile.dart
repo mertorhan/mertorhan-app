@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Dort turun ortak liste ogesi.
+/// Blog, film ve kitabin ortak liste ogesi.
 ///
 /// Duzen:
 ///   [96x96 gorsel]  Ust satir · parcalarla
 ///                   Baslik
 ///                   Ozet en fazla iki satir...
 ///
-/// Blog, film, kitap ve galeri ayni kalibi kullanir; dort kopya yazilmaz.
+/// Uc tur ayni kalibi kullanir; uc kopya yazilmaz.
+///
+/// GALERI BUNU KULLANMIYOR: orada masonry izgara var, fotograflar kendi
+/// en-boy oranlariyla ve altlarinda yazi olmadan diziliyor (PhotoGrid).
+/// Sitedeki ayrim da boyle.
 class MediaTile extends StatelessWidget {
   const MediaTile({
     required this.imageUrl,
@@ -34,8 +38,7 @@ class MediaTile extends StatelessWidget {
 
   /// Verilmezse oge dokunulabilir gorunmez.
   ///
-  /// Dort turun dordu de artik bir sey aciyor: blog, film ve kitap detay
-  /// ekranini, galeri tam ekran goruntuleyiciyi. Yine de zorunlu
+  /// Uc kullanicinin ucu de detay ekranini aciyor. Yine de zorunlu
   /// degil — verilmeyen bir oge sessizce dokunulamaz kalir.
   final VoidCallback? onTap;
 
