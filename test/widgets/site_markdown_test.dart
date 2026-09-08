@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mertorhan_app/api/api_client.dart';
 import 'package:mertorhan_app/theme/app_colors.dart';
 import 'package:mertorhan_app/theme/app_theme.dart';
 import 'package:mertorhan_app/widgets/site_markdown.dart';
@@ -79,6 +80,21 @@ List<BoxDecoration> _gorunurBezemeler(WidgetTester tester) {
   ].whereType<BoxDecoration>().where((BoxDecoration d) {
     return d.color != null || d.border != null;
   }).toList();
+}
+
+/// Sahte acici. Gercek launchUrl hicbir testte cagrilmaz.
+class _Sahne {
+  _Sahne({required this.sonuc, this.firlat = false});
+
+  final bool sonuc;
+  final bool firlat;
+  final List<Uri> cagrilar = <Uri>[];
+
+  Future<bool> ac(Uri uri) async {
+    cagrilar.add(uri);
+    if (firlat) throw Exception('platform kanali patladi');
+    return sonuc;
+  }
 }
 
 void main() {
@@ -396,5 +412,131 @@ void main() {
     expect(_baglantiStiliVar(tester), isTrue);
     // Tanim satiri yutuldu.
     expect(find.textContaining('[1]:'), findsNothing);
+  });
+
+  // =================== BAGLANTI ACMA ===================
+
+  /// Sahte acici: cagrildigi Uri'leri biriktirir, gercek launchUrl hic
+  /// cagrilmaz. Bu dosyadaki hicbir test tarayici acmaz.
+  ///
+  /// Aciciyi disaridan verebilmek icin SiteMarkdown'a opener parametresi
+  /// eklendi; launchUrl statik oldugu icin baska turlu sema kisiti
+  /// sinanamazdi.
+
+  Future<_Sahne> baglantiyaDokun(
+    WidgetTester tester,
+    String markdown, {
+    bool sonuc = true,
+  }) async {
+    final _Sahne sahne = _Sahne(sonuc: sonuc);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SiteMarkdown(text: markdown, opener: sahne.ac),
+        ),
+      ),
+    );
+    await tester.tap(find.textContaining('bag'));
+    await tester.pumpAndSettle();
+    return sahne;
+  }
+
+  testWidgets('https baglantisi aciciya dogru Uri ile gider', (tester) async {
+    final _Sahne s = await baglantiyaDokun(
+      tester,
+      '[bag](https://ornek.com/yol?a=1)',
+    );
+
+    expect(s.cagrilar, <Uri>[Uri.parse('https://ornek.com/yol?a=1')]);
+    expect(find.text('Bağlantı açılamadı'), findsNothing);
+  });
+
+  testWidgets('http baglantisi da acilir', (tester) async {
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](http://ornek.com/)');
+
+    expect(s.cagrilar, <Uri>[Uri.parse('http://ornek.com/')]);
+  });
+
+  testWidgets('tel semasi ACILMAZ, SnackBar cikar', (tester) async {
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](tel:+905551112233)');
+
+    expect(s.cagrilar, isEmpty);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
+  });
+
+  testWidgets('javascript semasi ACILMAZ', (tester) async {
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](javascript:alert(1))');
+
+    expect(s.cagrilar, isEmpty);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
+  });
+
+  testWidgets('mailto ACILMAZ: BILINEN AYRISMA', (tester) async {
+    // Sitede mailto calisiyor, burada calismiyor. Bilincli kisit:
+    // beyaz liste dar tutuldu, genisletmek kolay geri almak zordur.
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](mailto:a@ornek.com)');
+
+    expect(s.cagrilar, isEmpty);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
+  });
+
+  testWidgets('sms ve file semalari da ACILMAZ', (tester) async {
+    for (final String hedef in <String>[
+      'sms:+905551112233',
+      'file:///etc/passwd',
+    ]) {
+      final _Sahne s = await baglantiyaDokun(tester, '[bag]($hedef)');
+      expect(s.cagrilar, isEmpty, reason: '$hedef acilmamaliydi');
+    }
+  });
+
+  testWidgets('goreli yol site kokune gore cozulur', (tester) async {
+    // Kok adres hardcode degil; ApiClient.baseUrl'den turetiliyor ve
+    // "/" ile baslayan yol /api/v1/ kismini dusuruyor.
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](/blog/scrum/)');
+
+    expect(s.cagrilar, <Uri>[
+      Uri.parse(ApiClient.baseUrl).resolve('/blog/scrum/'),
+    ]);
+    expect(s.cagrilar.single.toString(), 'https://www.mertorhan.com/blog/scrum/');
+  });
+
+  testWidgets('semasiz goreli olmayan yol ACILMAZ', (tester) async {
+    // "ornek.com/x" bir yol mu alan adi mi belli degil; tahmin edilmez.
+    final _Sahne s = await baglantiyaDokun(tester, '[bag](ornek.com/x)');
+
+    expect(s.cagrilar, isEmpty);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
+  });
+
+  testWidgets('acici false donerse SnackBar cikar', (tester) async {
+    final _Sahne s = await baglantiyaDokun(
+      tester,
+      '[bag](https://ornek.com/)',
+      sonuc: false,
+    );
+
+    // Cagrildi ama acilamadi; kullanici sessiz birakilmiyor.
+    expect(s.cagrilar.length, 1);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
+  });
+
+  testWidgets('acici firlatirsa ekran cokmez, SnackBar cikar', (tester) async {
+    final _Sahne s = _Sahne(sonuc: true, firlat: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SiteMarkdown(text: '[bag](https://ornek.com/)', opener: s.ac),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('bag'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Bağlantı açılamadı'), findsOneWidget);
   });
 }

@@ -48,6 +48,11 @@ dependencies:
   # sabit: ayristiriciyi baskasinin insafina birakmiyoruz.
   markdown: 7.3.1
 
+  # Blog metnindeki baglantilari harici tarayicida acar. Flutter ekibinin
+  # bakiminda (flutter/packages deposu). Surum SABIT: acilis davranisi
+  # surum atlamasiyla sessizce degismesin.
+  url_launcher: 6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

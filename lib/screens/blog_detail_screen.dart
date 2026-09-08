@@ -9,11 +9,14 @@ import '../theme/app_colors.dart';
 import '../utils/meta_line.dart';
 import '../widgets/error_view.dart';
 import '../widgets/quote_box.dart';
+import '../widgets/site_markdown.dart';
 
 /// Tek bir yazinin detayi.
 ///
-/// Govde duz metin olarak basilir; markdown islenmiyor (site tarafinda da
-/// henuz islenmiyor, ayri kart).
+/// PARAGRAF ve ALINTI bloklari markdown olarak cizilir; sitede o iki blok
+/// {{ section.text|markdown }} filtresinden geciyor. Baslik, gorsel
+/// basligi ve gorsel altyazisi GECMIYOR, o yuzden burada da duz metin
+/// kaliyor. Islenen kural kumesi SiteMarkdown'da tanimli.
 class BlogDetailScreen extends StatefulWidget {
   const BlogDetailScreen({required this.slug, this.api, super.key});
 
@@ -171,9 +174,10 @@ class _SectionView extends StatelessWidget {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return switch (section.kind) {
-      SectionKind.paragraph => _Block(
-        child: Text(section.text, style: textTheme.bodyLarge),
-      ),
+      // Sitede {{ section.text|markdown }}; islenen kurallar
+      // SiteMarkdown'da. Punto ve renk oradaki stil tablosundan geliyor,
+      // burada ayrica bodyLarge verilmiyor.
+      SectionKind.paragraph => _Block(child: SiteMarkdown(text: section.text)),
 
       // h2 ve h3 farkli tema katmanlari; sabit puntolar yazilmaz.
       SectionKind.heading => _Block(
@@ -267,8 +271,15 @@ class _QuoteBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     // Kutu stili QuoteBox'ta; kitap detayi da ayni kutuyu ciziyor.
     // Kaynak bos "" gelebilir, o zaman satiri QuoteBox cizmiyor.
+    //
+    // markdown: true — sitede alinti blogu da
+    // {{ section.text|markdown }} filtresinden geciyor.
     return _Block(
-      child: QuoteBox(text: section.text, source: section.quoteSource),
+      child: QuoteBox(
+        text: section.text,
+        source: section.quoteSource,
+        markdown: true,
+      ),
     );
   }
 }
