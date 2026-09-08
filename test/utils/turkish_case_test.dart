@@ -17,8 +17,15 @@ void main() {
   });
 
   test('Turkce ozel harf icermeyen metin bozulmaz', () {
+    // 'Portre'de ne 'i' ne 'ı' var; duz toUpperCase ile ayni sonuc.
     expect(turkishUpper('Portre'), 'PORTRE');
+    expect(turkishUpper('Portre'), 'Portre'.toUpperCase());
+  });
+
+  test('cok kelimeli metinde kelime sonundaki i de noktali buyur', () {
     expect(turkishUpper('Sokak Fotografi'), 'SOKAK FOTOGRAFİ');
+    // Bosluk ve diger harfler yerinde kaliyor.
+    expect(turkishUpper('Sokak Fotografi'), isNot(contains('I')));
   });
 
   test('zaten buyuk yazilmis noktali I bozulmaz', () {

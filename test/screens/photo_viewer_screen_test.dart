@@ -122,19 +122,39 @@ void main() {
     await tester.pumpWidget(_wrap(photos, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('MİMARİ'), findsOneWidget);
+    // Satir VAR ve metni buyutulmus hali.
+    final Finder satir = find.byKey(PhotoViewerScreen.categoryKey);
+    expect(satir, findsOneWidget);
+    expect(tester.widget<Text>(satir).data, 'MİMARİ');
     // Dart'in duz toUpperCase'i burada 'MIMARI' verirdi.
     expect(find.text('MIMARI'), findsNothing);
   });
 
-  testWidgets('kategori yoksa satir hic cizilmez', (tester) async {
-    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+  testWidgets('kategori NULL ise satir cizilmez', (tester) async {
+    final List<Photo> photos = <Photo>[
+      _photo(id: 1, title: 'Birinci', location: 'Muğla'),
+    ];
+
+    await tester.pumpWidget(_wrap(photos, 0));
     await tester.pumpAndSettle();
 
-    // Konum da tarih de bos degil ama kategori null; sadece baslik ve
-    // konum kaliyor.
+    expect(find.byKey(PhotoViewerScreen.categoryKey), findsNothing);
+    // Kunyenin geri kalani yerinde: eksik olan yalnizca kategori.
     expect(find.text('Muğla'), findsOneWidget);
-    expect(find.text('1 / 3'), findsOneWidget);
+  });
+
+  testWidgets('kategori BOS ise satir cizilmez', (tester) async {
+    // Sunucu bos metin alanlarini "" donduruyor, null degil; null
+    // kontrolu tek basina yetmez.
+    final List<Photo> photos = <Photo>[
+      _photo(id: 1, title: 'Birinci', category: '', location: 'Muğla'),
+    ];
+
+    await tester.pumpWidget(_wrap(photos, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(PhotoViewerScreen.categoryKey), findsNothing);
+    expect(find.text('Muğla'), findsOneWidget);
   });
 
   testWidgets('konum da tarih de yoksa kunye satiri cizilmez', (tester) async {

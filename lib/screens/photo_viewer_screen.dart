@@ -23,6 +23,13 @@ class PhotoViewerScreen extends StatefulWidget {
     super.key,
   });
 
+  /// Kunyedeki kategori satirinin isareti.
+  ///
+  /// Satirin CIZILMEDIGINI dogrulamanin baska yolu yok: metni bilinmeyen
+  /// bir Text'in yoklugu aranamaz. Testte tekrar yazilmasin diye burada
+  /// duruyor, sihirli metin iki yere kopyalanmiyor.
+  static const Key categoryKey = Key('photo-viewer-category');
+
   /// Listedeki fotograflarin tamami; gecis bunlar arasinda doner.
   final List<Photo> photos;
 
@@ -218,6 +225,7 @@ class _PhotoPage extends StatelessWidget {
                 // Kategori null gelebilir; sunucu bos "" de dondurebilir.
                 if (kategori != null && kategori.isNotEmpty) ...[
                   Text(
+                    key: PhotoViewerScreen.categoryKey,
                     // Sunucudan gelen metin: kaynakta buyuk yazamayiz,
                     // Dart'in toUpperCase'i de Turkce bilmez.
                     turkishUpper(kategori),

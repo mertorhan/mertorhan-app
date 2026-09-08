@@ -102,8 +102,10 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
   /// karsilastirmasina guvenmek yerine id okunuyor.
   void _openViewer(Photo photo) {
     final int index = _photos.indexWhere((Photo p) => p.id == photo.id);
-    // Olmamasi gereken durum: liste ile ekrandaki oge ayrismis. Cokmek
-    // yerine hicbir sey yapilmaz.
+    // Olmamasi gereken durum: liste ile ekrandaki oge ayrismis. Debug'da
+    // yakalanir, uretimde sessizce gecilir — goruntuleyicideki assert
+    // deseninin aynisi. Tek basina return iz birakmiyordu.
+    assert(index >= 0, 'Ekrandaki oge _photos listesinde yok');
     if (index < 0) return;
 
     Navigator.of(context).push(
