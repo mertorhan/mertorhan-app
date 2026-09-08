@@ -83,6 +83,50 @@ Future<void> _sagaKaydir(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+// --- KB-114 adim 2: yakinlastirma ---
+//
+// GERCEK PINCH JESTI SIMULE EDILMIYOR: widget testinde iki parmakli
+// olcek jesti guvenilir degil (esikler, arena, zamanlama). Bunun yerine
+// TransformationController dogrudan surulüyor — uretimde InteractiveViewer
+// ayni kontrolcuyu ayni sekilde dolduruyor.
+
+InteractiveViewer _viewer(WidgetTester tester) =>
+    tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+
+/// Gosterilen sayfanin donusum kontrolcusu.
+///
+/// Kontrolcuyu uretim kodu VERDIGI icin widget uzerinden okunabiliyor;
+/// verilmeseydi InteractiveViewer kendi ic kontrolcusunu kurar ve burasi
+/// null donerdi.
+TransformationController _zoomController(WidgetTester tester) =>
+    _viewer(tester).transformationController!;
+
+double _olcek(WidgetTester tester) =>
+    _zoomController(tester).value.getMaxScaleOnAxis();
+
+Future<void> _zoomTo(WidgetTester tester, double scale) async {
+  // Matrix4.scale bu surumde deprecated; scaleByDouble dort bilesen alir.
+  _zoomController(tester).value = Matrix4.identity()
+    ..scaleByDouble(scale, scale, scale, 1);
+  await tester.pumpAndSettle();
+}
+
+ScrollPhysics? _pageViewFizigi(WidgetTester tester) =>
+    tester.widget<PageView>(find.byType(PageView)).physics;
+
+ScrollPhysics? _sayfaFizigi(WidgetTester tester) => tester
+    .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+    .physics;
+
+/// Cift dokunma. flutter_test'te hazir yardimci yok; iki dokunma arasi
+/// kDoubleTapTimeout'un (300 ms) altinda kalmali.
+Future<void> _ciftDokun(WidgetTester tester) async {
+  await tester.tap(find.byType(InteractiveViewer));
+  await tester.pump(const Duration(milliseconds: 50));
+  await tester.tap(find.byType(InteractiveViewer));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   // --- Acilis ve kunye ---
 
@@ -393,5 +437,182 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PhotoViewerScreen), findsNothing);
+  });
+
+  // --- KB-114 adim 2: yakinlastirma ve jest kilidi ---
+
+  testWidgets('acilista olcek 1x ve PageView kilitli DEGIL', (tester) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    expect(_olcek(tester), 1.0);
+    expect(_pageViewFizigi(tester), isNull);
+
+    final InteractiveViewer viewer = _viewer(tester);
+    expect(viewer.minScale, 1.0);
+    expect(viewer.maxScale, 3.0);
+    // 1x'te pan kapali: iki parmakla surukleme gorseli bosuna kaydirmasin.
+    expect(viewer.panEnabled, isFalse);
+  });
+
+  testWidgets('olcek 2x olunca PageView KILITLENIR', (tester) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    await _zoomTo(tester, 2);
+
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+    // Kilit ancak pan aciksa ise yarar; ikisi birlikte degisiyor.
+    expect(_viewer(tester).panEnabled, isTrue);
+  });
+
+  testWidgets('1x e donunce PageView yeniden kaydirilabilir', (tester) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    await _zoomTo(tester, 2);
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    await _zoomTo(tester, 1);
+    expect(_pageViewFizigi(tester), isNull);
+
+    // Fizik alani degil, gercek jest: kaydirma yine calisiyor.
+    await _solaKaydir(tester);
+    expect(find.text('2 / 3'), findsOneWidget);
+  });
+
+  testWidgets('yakinlastirilmis sayfada DIKEY kaydirma da kapali', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+    expect(_sayfaFizigi(tester), isNull);
+
+    await _zoomTo(tester, 2);
+    expect(_sayfaFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    await _zoomTo(tester, 1);
+    expect(_sayfaFizigi(tester), isNull);
+  });
+
+  testWidgets('sayfa degisince olcek 1x e doner ve kilit acilir', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    await _zoomTo(tester, 2);
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    // Kilitliyken kullanici kaydiramaz; programatik gecis fizige takilmaz.
+    //
+    // jumpToPage, animateToPage DEGIL: animasyonun ilerlemesi icin kare
+    // pompalanmasi gerekir, oysa donen Future pompalamadan once await
+    // edilseydi test kilitlenirdi. jumpToPage senkron ve onPageChanged'i
+    // yine tetikliyor.
+    final PageController pageController = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    pageController.jumpToPage(pageController.page!.round() + 1);
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(_pageViewFizigi(tester), isNull);
+    expect(_olcek(tester), 1.0);
+  });
+
+  testWidgets('cift dokunma yakinlasmisken 1x e dondurur', (tester) async {
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    await _zoomTo(tester, 2);
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    await _ciftDokun(tester);
+
+    expect(_olcek(tester), 1.0);
+    // Kilit de acildi: donusum dinleyicisi ust ekrani haberdar etti.
+    expect(_pageViewFizigi(tester), isNull);
+  });
+
+  testWidgets('1x iken cift dokunma HICBIR SEY yapmaz', (tester) async {
+    // Bilincli karar: nereye yakinlasilacagini hesaplamak ayri bir is.
+    await tester.pumpWidget(_wrap(_ucFotograf(), 0));
+    await tester.pumpAndSettle();
+
+    await _ciftDokun(tester);
+
+    expect(_olcek(tester), 1.0);
+    expect(_pageViewFizigi(tester), isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('TEK FOTOGRAF: yakinlastirma mevcut kilidi EZMEZ', (
+    tester,
+  ) async {
+    final List<Photo> photos = <Photo>[
+      _photo(id: 1, title: 'Tek', location: 'Muğla'),
+    ];
+
+    await tester.pumpWidget(_wrap(photos, 0));
+    await tester.pumpAndSettle();
+    // Tek fotografta kilit zaten vardi.
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    await _zoomTo(tester, 2);
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+
+    // 1x'e donunce yakinlastirma kilidi kalkiyor ama tek fotograf
+    // kilidi DURUYOR; iki kosul birlesiyor, biri digerini ezmiyor.
+    await _zoomTo(tester, 1);
+    expect(_pageViewFizigi(tester), isA<NeverScrollableScrollPhysics>());
+    expect(find.text('1 / 1'), findsOneWidget);
+  });
+
+  testWidgets('kunye ve EXIF InteractiveViewer in DISINDA kalir', (
+    tester,
+  ) async {
+    final List<Photo> photos = <Photo>[
+      _photo(
+        id: 1,
+        title: 'Birinci',
+        category: 'Mimari',
+        location: 'Ankara',
+        camera: 'Fujifilm X-T30',
+      ),
+    ];
+
+    await tester.pumpWidget(_wrap(photos, 0));
+    await tester.pumpAndSettle();
+
+    final Finder sarmal = find.byType(InteractiveViewer);
+    // Kunye yazilari yakinlasmaz: hicbiri sarmalin altinda degil.
+    for (final String metin in <String>[
+      'MİMARİ',
+      'Ankara',
+      'KAMERA',
+      'Fujifilm X-T30',
+    ]) {
+      expect(
+        find.descendant(of: sarmal, matching: find.text(metin)),
+        findsNothing,
+        reason: '$metin sarmalin icinde kalmis',
+      );
+    }
+
+    // Gorsel yuvasi ise sarmalin ICINDE.
+    expect(
+      find.descendant(of: sarmal, matching: find.text('Görsel yok')),
+      findsOneWidget,
+    );
+
+    // BASLIK IKI YERDE, ve ikisi sarmalin farkli taraflarinda: yer
+    // tutucudaki (gorsel yuvasi) iceride, kunyedeki disarida. Kunyedeki
+    // yakinlasmaz — istenen de bu.
+    expect(find.text('Birinci'), findsNWidgets(2));
+    expect(
+      find.descendant(of: sarmal, matching: find.text('Birinci')),
+      findsOneWidget,
+    );
   });
 }

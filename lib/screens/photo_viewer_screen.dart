@@ -15,7 +15,10 @@ import '../utils/turkish_date.dart';
 /// kayitlari cektiyse onlar aynen buraya gecer; goruntuleyici yeni istek
 /// atmaz.
 ///
-/// ZOOM YOK: sonraki adimin isi, paket karari ayri verilecek.
+/// Fotografa yakinlasilabilir (InteractiveViewer, 1x-3x). Yakinlastirma
+/// bir ANAHTAR gibi calisiyor: 1x'te sayfa gecisi ve dikey kaydirma
+/// aciktir, uzerinde ikisi de susar ve parmak fotografi gezdirir.
+/// Gerekcesi _zoomed alaninin dokumaninda.
 class PhotoViewerScreen extends StatefulWidget {
   const PhotoViewerScreen({
     required this.photos,
@@ -54,6 +57,27 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
   /// PageView'in ham sayfa numarasi; fotograf index'i DEGIL.
   late int _page;
 
+  /// Gosterilen sayfa yakinlastirilmis mi. Sayfanin kendisi bildiriyor.
+  ///
+  /// JEST KILIDI — neden bu bayrak var (Flutter 3.47.2 davranisi):
+  ///
+  /// InteractiveViewer'in olcek taniyicisi tek parmakla da surukler ve
+  /// jest arenasina KOSULSUZ girer; panEnabled: false onu arenadan
+  /// cikarmaz, yalnizca kazandigi jesti uygulamamasini saglar.
+  ///
+  /// 1x'te PageView'i kurtaran sey esik farki: surukleme taniyicilari
+  /// 18 piksele (yatayda yalniz dx, dikeyde yalniz dy) bakarken olcek
+  /// taniyicisi 36 piksel Oklid mesafesi istiyor. dx de dy de 18'in
+  /// altindayken Oklid en fazla ~25 olabilir, yani 36'ya hic ulasamaz:
+  /// iki eksen de kapli oldugu icin tek parmak surukleme HER ZAMAN
+  /// PageView'e ya da sayfanin dikey kaydiricisina duser.
+  ///
+  /// Yakinlastirilmisken tam tersi gerekiyor ve
+  /// NeverScrollableScrollPhysics tam olarak bunu yapiyor: kaydiricinin
+  /// surukleme taniyicilarini arenadan KALDIRIYOR (kaybettirmiyor).
+  /// Geriye tek basina olcek taniyicisi kaliyor, pan sorunsuz calisiyor.
+  bool _zoomed = false;
+
   /// Taban her zaman uzunlugun tam kati: bu sayede taban % uzunluk == 0
   /// ve acilistaki initialIndex bozulmadan geri okunur.
   int get _taban => widget.photos.length * _baslangicTuru;
@@ -91,6 +115,12 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     super.dispose();
   }
 
+  /// Gosterilen sayfa yakinlastirma durumunu bildirdiginde.
+  void _onZoomChanged(bool zoomed) {
+    if (zoomed == _zoomed) return;
+    setState(() => _zoomed = zoomed);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Tek fotografta kaydirmanin gidecegi yer yok; jesti hic acmiyoruz.
@@ -109,12 +139,24 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
               // hic vermez (son sayfada sola cekince geri ziplar,
               // onPageChanged tetiklenmez); jumpToPage ile telafi de
               // gorunur bir sicrama yapardi.
-              physics: tekFotograf
+              // IKI KOSUL BIRLESIR, biri digerini ezmez: tek fotografta
+              // gidilecek sayfa yok; yakinlastirilmisken de surukleme
+              // fotografi kaydirmali, sayfayi degil.
+              physics: (tekFotograf || _zoomed)
                   ? const NeverScrollableScrollPhysics()
                   : null,
-              onPageChanged: (int page) => setState(() => _page = page),
-              itemBuilder: (BuildContext context, int page) =>
-                  _PhotoPage(photo: widget.photos[_photoIndex(page)]),
+              // Sayfa degisince yakinlastirma durumu sifirlanir. Eski
+              // sayfayi PageView zaten atiyor (gorunmeyen sayfa tutulmaz),
+              // ama BURADAKI bayrak kendiliginden dusmez; dusmezse kilit
+              // acik kalir ve kaydirma bir daha calismaz.
+              onPageChanged: (int page) => setState(() {
+                _page = page;
+                _zoomed = false;
+              }),
+              itemBuilder: (BuildContext context, int page) => _PhotoPage(
+                photo: widget.photos[_photoIndex(page)],
+                onZoomChanged: _onZoomChanged,
+              ),
             ),
             // PageView'IN DISINDA, Stack'in ust katmaninda: kaydirirken
             // sayac da kapat dugmesi de yerinde kalir.
@@ -175,8 +217,8 @@ class _TopBar extends StatelessWidget {
 /// DIKEY KAYDIRILABILIR: kunye uzun oldugunda (alti EXIF alani dolu bir
 /// kayitta) icerik ekrana sigmiyor. Yatay PageView ile dikey scroll ayni
 /// jesti paylasmaz; asagi kaydirmak fotografi degistirmez.
-class _PhotoPage extends StatelessWidget {
-  const _PhotoPage({required this.photo});
+class _PhotoPage extends StatefulWidget {
+  const _PhotoPage({required this.photo, required this.onZoomChanged});
 
   /// Gorselin kaplayabilecegi EN FAZLA yukseklik, ekran boyunun orani.
   /// Sitedeki 55vh'nin karsiligi.
@@ -185,10 +227,72 @@ class _PhotoPage extends StatelessWidget {
   /// Ust cubugun (sayac + kapat dugmesi) altinda kalmamak icin.
   static const double _ustBosluk = 48;
 
+  /// Yakinlastirma tavani.
+  ///
+  /// Buyuk gorselin uzun kenari 2000 piksel (sitedeki imaging kodunda
+  /// MAX_LONG_EDGE). Telefonda birkac yuz piksellik bir kutuda 3x zaten
+  /// kaynagin cozunurlugunu tuketiyor; otesi bulanik buyutme olurdu.
+  static const double _maxScale = 3.0;
+
+  /// Bunun ustu "yakinlastirilmis" sayilir.
+  ///
+  /// Tam 1.0 ile karsilastirmak riskli: matris carpimlarindan kalan
+  /// kayan nokta artigi (1.0000001) kilidi acilmaz birakirdi ve bu
+  /// kullaniciya "kaydirma bozuldu" diye gorunurdu.
+  static const double _zoomEsigi = 1.01;
+
   final Photo photo;
+
+  /// Olcek 1x'in ustune cikinca / geri inince ust ekrana haber verir.
+  /// Ust ekran buna gore PageView'i kilitler.
+  final ValueChanged<bool> onZoomChanged;
+
+  @override
+  State<_PhotoPage> createState() => _PhotoPageState();
+}
+
+class _PhotoPageState extends State<_PhotoPage> {
+  final TransformationController _transformation = TransformationController();
+
+  bool _zoomed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformation.addListener(_onTransformChanged);
+  }
+
+  @override
+  void dispose() {
+    _transformation.removeListener(_onTransformChanged);
+    _transformation.dispose();
+    super.dispose();
+  }
+
+  void _onTransformChanged() {
+    final bool zoomed =
+        _transformation.value.getMaxScaleOnAxis() > _PhotoPage._zoomEsigi;
+    // Her matris degisiminde degil, yalnizca ESIK gecildiginde is yapilir;
+    // pan sirasinda saniyede onlarca setState atmanin anlami yok.
+    if (zoomed == _zoomed) return;
+    setState(() => _zoomed = zoomed);
+    widget.onZoomChanged(zoomed);
+  }
+
+  /// Yakinlasmisken 1x'e dondurur.
+  ///
+  /// 1x IKEN HICBIR SEY YAPMAZ. Bu bilincli: dokunulan noktayi odak alan
+  /// bir matris hesaplamak ayri bir is ve bu kartta yok. Sessiz kalmak,
+  /// kullanicinin bakmadigi bir yere ziplamaktan iyi.
+  void _onDoubleTap() {
+    if (!_zoomed) return;
+    // Dinleyici zaten calisip _zoomed'i ve ust ekrani duzeltiyor.
+    _transformation.value = Matrix4.identity();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final Photo photo = widget.photo;
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     // Tam boy varsa o; yoksa kucugu. Listedeki listImage'in TERSI sira:
@@ -207,15 +311,43 @@ class _PhotoPage extends StatelessWidget {
     final String? kategori = photo.category;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: _ustBosluk, bottom: 32),
+      // Yakinlastirilmisken dikey kaydirma da susar: parmak fotografi
+      // gezdirsin, sayfayi degil.
+      physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
+      padding: const EdgeInsets.only(
+        top: _PhotoPage._ustBosluk,
+        bottom: 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PhotoFrame(
-            url: url,
-            title: photo.title,
-            maxHeight:
-                MediaQuery.sizeOf(context).height * _gorselYukseklikOrani,
+          // YALNIZCA GORSEL sariliyor. Kunye ve EXIF izgarasi sarmalin
+          // disinda kaliyor; yazilar yakinlasmiyor.
+          GestureDetector(
+            // Cift dokunma InteractiveViewer'da yok, distan ekleniyor.
+            // Icteki jest katmani opaque oldugu icin deferToChild yeterli;
+            // dokunma tum gorsel kutusunda algilaniyor.
+            onDoubleTap: _onDoubleTap,
+            child: InteractiveViewer(
+              transformationController: _transformation,
+              minScale: 1.0,
+              maxScale: _PhotoPage._maxScale,
+              // 1x'te KAPALI: iki parmakla suruklemede olcek taniyicisi
+              // jesti kazanir, acik olsaydi gorsel bosuna kayardi.
+              // >1x'te ACIK, cunku o an surukleme taniyicilari
+              // NeverScrollableScrollPhysics ile arenadan cikmis oluyor.
+              panEnabled: _zoomed,
+              child: _PhotoFrame(
+                url: url,
+                title: photo.title,
+                // Yakinlasma bu kutunun ICINDE olur: InteractiveViewer
+                // kisitlari oldugu gibi geciriyor ve cocugun boyutuna
+                // kirpiyor. Oran degismiyor.
+                maxHeight:
+                    MediaQuery.sizeOf(context).height *
+                    _PhotoPage._gorselYukseklikOrani,
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
