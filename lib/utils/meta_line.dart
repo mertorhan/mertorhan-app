@@ -1,6 +1,5 @@
 import '../models/blog_post.dart';
 import '../models/book.dart';
-import '../models/photo.dart';
 import '../models/review.dart';
 import 'turkish_date.dart';
 import 'turkish_number.dart';
@@ -48,7 +47,3 @@ String bookMetaLine(Book book) => joinMeta([
   book.author,
   book.rating == null ? null : formatRating(book.rating!),
 ]);
-
-/// Galeri: kategori · konum
-String photoMetaLine(Photo photo) =>
-    joinMeta([photo.category, photo.location]);
