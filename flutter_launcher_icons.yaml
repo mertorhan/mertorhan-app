@@ -1,0 +1,12 @@
+flutter_launcher_icons:
+  image_path: "assets/brand/ikon-1024.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  adaptive_icon_background: "#f4f1e9"
+  adaptive_icon_foreground: "assets/brand/ikon-onplan-1024.png"
+  # On plan gorseli guvenli alana (tuvalin ic %61'i) gore ZATEN
+  # kucultulmus. Aracin varsayilan %16 payi bunun ustune binince isaret
+  # iki kez kucultulmus oluyordu; pay sifirlaniyor.
+  adaptive_icon_foreground_inset: 0
+  min_sdk_android: 21

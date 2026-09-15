@@ -64,6 +64,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Uygulama ikonunu assets/brand/ kaynaklarindan uretir (Android + iOS).
+  # Yalnizca gelistirme araci: `dart run flutter_launcher_icons` ile elle
+  # calistirilir, uygulamaya girmez. Ayarlari flutter_launcher_icons.yaml.
+  # Surum SABIT: uretilen ikon dosyalari surum atlamasiyla sessizce
+  # degismesin.
+  flutter_launcher_icons: 0.14.4
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
