@@ -29,6 +29,10 @@ Uygulama bir vitrin/rehber — reklam panosu değil.
 - **Karşılama/tanıtım ekranı yok.** Sistem açılış ekranında sadece MO işareti;
   metin veya slogan eklenmez.
 
+**Sayfa notu yalnızca web'de.** Film ve kitap liste sayfalarındaki tanıtım
+notu ve özet sayıları **bilinçli olarak** yalnızca sitede duruyor. Mobile
+eklenmeyecek — eksik değildir, bir karardır.
+
 ## Teknik künye
 - Flutter 3.47.2 (stable) · Dart 3.13.2
 - **Alt sınır: Flutter `>=3.44.0`** (`pubspec.lock`). `url_launcher` dayattı;
@@ -234,3 +238,14 @@ Emin değilsen dal aç — maliyeti sıfır.
 - `flutter_markdown_plus`, `markdown` ve `url_launcher` sürümleri **sabit
   yazılı** — bunlara caret ekleme. Sürüm yükseltmek ayrı bir karar, ayrı bir
   kart.
+- **`dart run flutter_launcher_icons` çalıştırıldıktan SONRA
+  `ios/Runner.xcodeproj/project.pbxproj` MUTLAKA kontrol edilir ve geri
+  alınır.** Araç (sürüm `0.14.4`) `ASSETCATALOG` içeren her satırın değerini
+  `AppIcon` yapıyor; asıl hedefi `ASSETCATALOG_COMPILER_APPICON_NAME` zaten
+  `AppIcon` olduğu için orada zararsız, ama evet/hayır ayarı olan
+  `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES`
+  satırını bozuyor. **Her çalıştırmada tekrarlar.**
+  ```bash
+  git diff --stat ios/Runner.xcodeproj/project.pbxproj   # boş değilse:
+  git checkout -- ios/Runner.xcodeproj/project.pbxproj
+  ```
